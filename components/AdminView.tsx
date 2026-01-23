@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { 
   rtdb,
@@ -10,9 +9,9 @@ import {
 } from "../services/firebase";
 import { 
   Users, Shield, CreditCard, Search, ArrowLeft, 
-  Zap, Loader2, Trash2, TrendingUp, Code, Image, ToggleLeft, ToggleRight, Save, Layout, Plus, List, Globe, MessageCircle
+  Zap, Loader2, Trash2, TrendingUp, Code, Image, ToggleLeft, ToggleRight, Save, Layout, Plus, List, Globe, MessageCircle, Bell, Play, Info
 } from 'lucide-react';
-import { SystemConfig, AdEntry } from '../types';
+import { SystemConfig, AdEntry, NotificationEntry, TutorialStepEntry } from '../types';
 
 interface AdminViewProps {
   onBack: () => void;
@@ -35,6 +34,19 @@ const DEFAULT_CONFIG: SystemConfig = {
     ],
     externalScript: ""
   },
+  notifications: {
+    list: []
+  },
+  tutorial: {
+    steps: []
+  },
+  dailyPopup: {
+    enabled: false,
+    title: "System Update",
+    content: "We've added new features to the core engine.",
+    buttonText: "Learn More",
+    buttonLink: "https://example.com"
+  },
   site: {
     footerCredit: "MINHAJUL ISLAM",
     socials: {
@@ -52,7 +64,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'Users' | 'System' | 'Site'>('Users');
+  const [activeTab, setActiveTab] = useState<'Users' | 'System' | 'Content' | 'Site'>('Users');
   const [config, setConfig] = useState<SystemConfig>(DEFAULT_CONFIG);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -79,6 +91,9 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
           ...data,
           developer: { ...DEFAULT_CONFIG.developer, ...(data.developer || {}) },
           ads: { ...DEFAULT_CONFIG.ads, ...(data.ads || {}) },
+          notifications: { ...DEFAULT_CONFIG.notifications, ...(data.notifications || {}) },
+          tutorial: { ...DEFAULT_CONFIG.tutorial, ...(data.tutorial || {}) },
+          dailyPopup: { ...DEFAULT_CONFIG.dailyPopup, ...(data.dailyPopup || {}) },
           site: { ...DEFAULT_CONFIG.site, ...(data.site || {}) }
         });
       }
@@ -93,18 +108,36 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
     finally { setIsSaving(false); }
   };
 
-  const addAdUnit = () => {
-    setConfig(prev => ({ ...prev, ads: { ...prev.ads, list: [...prev.ads.list, { image: '', link: '', label: 'SPONSORED' }] } }));
+  const addItem = (section: 'notifications' | 'tutorial') => {
+    if (section === 'notifications') {
+      const newList = [...(config.notifications?.list || []), { id: Date.now().toString(), text: 'New Alert', type: 'info' as const }];
+      setConfig(prev => ({ ...prev, notifications: { list: newList } }));
+    } else {
+      const newList = [...(config.tutorial?.steps || []), { id: Date.now().toString(), title: 'New Step', text: 'Step description' }];
+      setConfig(prev => ({ ...prev, tutorial: { steps: newList } }));
+    }
   };
 
-  const removeAdUnit = (index: number) => {
-    setConfig(prev => ({ ...prev, ads: { ...prev.ads, list: prev.ads.list.filter((_, i) => i !== index) } }));
+  const removeItem = (section: 'notifications' | 'tutorial', index: number) => {
+    if (section === 'notifications') {
+      const newList = config.notifications.list.filter((_, i) => i !== index);
+      setConfig(prev => ({ ...prev, notifications: { list: newList } }));
+    } else {
+      const newList = config.tutorial.steps.filter((_, i) => i !== index);
+      setConfig(prev => ({ ...prev, tutorial: { steps: newList } }));
+    }
   };
 
-  const updateAdUnit = (index: number, field: keyof AdEntry, value: string) => {
-    const newList = [...config.ads.list];
+  const updateNotif = (index: number, field: keyof NotificationEntry, value: string) => {
+    const newList = [...config.notifications.list];
     newList[index] = { ...newList[index], [field]: value };
-    setConfig(prev => ({ ...prev, ads: { ...prev.ads, list: newList } }));
+    setConfig(prev => ({ ...prev, notifications: { list: newList } }));
+  };
+
+  const updateTutorial = (index: number, field: keyof TutorialStepEntry, value: string) => {
+    const newList = [...config.tutorial.steps];
+    newList[index] = { ...newList[index], [field]: value };
+    setConfig(prev => ({ ...prev, tutorial: { steps: newList } }));
   };
 
   const filteredUsers = allUsers.filter(u => {
@@ -132,6 +165,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
           <div className="flex bg-surface p-1.5 rounded-2xl border border-borderMain shadow-sm overflow-hidden">
              <button onClick={() => setActiveTab('Users')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'Users' ? 'bg-primary text-white shadow-lg' : 'text-textDim'}`}>Users</button>
              <button onClick={() => setActiveTab('System')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'System' ? 'bg-primary text-white shadow-lg' : 'text-textDim'}`}>System</button>
+             <button onClick={() => setActiveTab('Content')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'Content' ? 'bg-primary text-white shadow-lg' : 'text-textDim'}`}>Content</button>
              <button onClick={() => setActiveTab('Site')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'Site' ? 'bg-primary text-white shadow-lg' : 'text-textDim'}`}>Site</button>
           </div>
         </header>
@@ -208,29 +242,118 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between px-1">
                     <span className="text-[10px] font-black text-textDim tracking-widest flex items-center gap-2"><List size={12}/> Slider Units</span>
-                    <button onClick={addAdUnit} className="flex items-center gap-1.5 text-primary text-[10px] font-black uppercase hover:underline"><Plus size={12}/> Add Unit</button>
+                    <button onClick={() => setConfig(prev => ({ ...prev, ads: { ...prev.ads, list: [...prev.ads.list, { image: '', link: '', label: 'SPONSORED' }] } }))} className="flex items-center gap-1.5 text-primary text-[10px] font-black uppercase hover:underline"><Plus size={12}/> Add Unit</button>
                   </div>
                   <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 no-scrollbar">
                     {config.ads.list.map((ad, idx) => (
                       <div key={idx} className="p-4 bg-bgMain rounded-2xl border border-borderMain space-y-3 relative group/ad">
-                        <button onClick={() => removeAdUnit(idx)} className="absolute top-2 right-2 text-red-500/30 hover:text-red-500 p-1"><Trash2 size={14}/></button>
+                        <button onClick={() => setConfig(prev => ({ ...prev, ads: { ...prev.ads, list: prev.ads.list.filter((_, i) => i !== idx) } }))} className="absolute top-2 right-2 text-red-500/30 hover:text-red-500 p-1"><Trash2 size={14}/></button>
                         <div className="grid grid-cols-2 gap-2">
-                           <input placeholder="Label" className="text-[10px] bg-white border border-borderMain rounded-lg px-3 py-2" value={ad.label} onChange={(e) => updateAdUnit(idx, 'label', e.target.value)} />
-                           <input placeholder="Redirect URL" className="text-[10px] bg-white border border-borderMain rounded-lg px-3 py-2" value={ad.link} onChange={(e) => updateAdUnit(idx, 'link', e.target.value)} />
+                           <input placeholder="Label" className="text-[10px] bg-white border border-borderMain rounded-lg px-3 py-2" value={ad.label} onChange={(e) => {
+                             const newList = [...config.ads.list];
+                             newList[idx] = { ...newList[idx], label: e.target.value };
+                             setConfig(prev => ({ ...prev, ads: { ...prev.ads, list: newList } }));
+                           }} />
+                           <input placeholder="Redirect URL" className="text-[10px] bg-white border border-borderMain rounded-lg px-3 py-2" value={ad.link} onChange={(e) => {
+                             const newList = [...config.ads.list];
+                             newList[idx] = { ...newList[idx], link: e.target.value };
+                             setConfig(prev => ({ ...prev, ads: { ...prev.ads, list: newList } }));
+                           }} />
                         </div>
-                        <input placeholder="Image URL" className="w-full text-[10px] bg-white border border-borderMain rounded-lg px-3 py-2" value={ad.image} onChange={(e) => updateAdUnit(idx, 'image', e.target.value)} />
+                        <input placeholder="Image URL" className="w-full text-[10px] bg-white border border-borderMain rounded-lg px-3 py-2" value={ad.image} onChange={(e) => {
+                          const newList = [...config.ads.list];
+                          newList[idx] = { ...newList[idx], image: e.target.value };
+                          setConfig(prev => ({ ...prev, ads: { ...prev.ads, list: newList } }));
+                        }} />
                       </div>
                     ))}
                   </div>
-                </div>
-                <div className="space-y-1.5 pt-4">
-                  <label className="text-[10px] font-black uppercase text-textDim flex items-center gap-2"><Layout size={12}/> Network Injection</label>
-                  <textarea value={config.ads.externalScript || ''} onChange={(e) => setConfig(prev => ({...prev, ads: {...prev.ads, externalScript: e.target.value}}))} className="w-full bg-bgMain rounded-xl px-4 py-3 text-[10px] font-mono border border-borderMain h-24" placeholder="Script tags..." />
                 </div>
               </div>
             </div>
             <button onClick={saveConfig} disabled={isSaving} className="md:col-span-2 w-full py-5 bg-primary text-white font-black uppercase rounded-3xl shadow-xl flex items-center justify-center gap-3 disabled:opacity-50">
               {isSaving ? <Loader2 className="animate-spin" /> : <Save size={18} />} Synchronize Core
+            </button>
+          </div>
+        ) : activeTab === 'Content' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-surface p-8 rounded-[2.5rem] border border-borderMain space-y-6 shadow-sm">
+              <div className="flex items-center justify-between pb-4 border-b border-borderMain">
+                <div className="flex items-center gap-3"><Bell className="text-primary"/><h3 className="text-sm font-black uppercase">Global Notifications</h3></div>
+                <button onClick={() => addItem('notifications')} className="text-primary text-[10px] font-black uppercase hover:underline flex items-center gap-1"><Plus size={14}/> Add Notif</button>
+              </div>
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 no-scrollbar">
+                {config.notifications.list.map((n, idx) => (
+                  <div key={n.id} className="p-5 bg-bgMain rounded-2xl border border-borderMain space-y-3 relative">
+                    <button onClick={() => removeItem('notifications', idx)} className="absolute top-4 right-4 text-red-500 hover:brightness-125"><Trash2 size={16}/></button>
+                    <textarea 
+                      value={n.text} 
+                      onChange={(e) => updateNotif(idx, 'text', e.target.value)} 
+                      className="w-full text-[11px] font-bold bg-white border border-borderMain rounded-xl p-3 h-20"
+                      placeholder="Notification text content..."
+                    />
+                    <div className="flex gap-2">
+                       {['info', 'warning', 'success'].map(type => (
+                         <button 
+                           key={type} 
+                           onClick={() => updateNotif(idx, 'type', type as any)}
+                           className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase border tracking-widest ${n.type === type ? 'bg-primary text-white border-primary' : 'bg-white text-textDim border-borderMain'}`}
+                         >
+                           {type}
+                         </button>
+                       ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-surface p-8 rounded-[2.5rem] border border-borderMain space-y-6 shadow-sm">
+              <div className="flex items-center justify-between pb-4 border-b border-borderMain">
+                <div className="flex items-center gap-3"><Play className="text-primary"/><h3 className="text-sm font-black uppercase">Mastery Tutorial Steps</h3></div>
+                <button onClick={() => addItem('tutorial')} className="text-primary text-[10px] font-black uppercase hover:underline flex items-center gap-1"><Plus size={14}/> Add Step</button>
+              </div>
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 no-scrollbar">
+                {config.tutorial.steps.map((s, idx) => (
+                  <div key={s.id} className="p-5 bg-bgMain rounded-2xl border border-borderMain space-y-3 relative">
+                    <button onClick={() => removeItem('tutorial', idx)} className="absolute top-4 right-4 text-red-500 hover:brightness-125"><Trash2 size={16}/></button>
+                    <input 
+                      value={s.title} 
+                      onChange={(e) => updateTutorial(idx, 'title', e.target.value)}
+                      className="w-full text-[11px] font-black uppercase tracking-widest bg-white border border-borderMain rounded-xl px-4 py-2"
+                      placeholder="Step Title"
+                    />
+                    <textarea 
+                      value={s.text} 
+                      onChange={(e) => updateTutorial(idx, 'text', e.target.value)} 
+                      className="w-full text-[11px] font-medium bg-white border border-borderMain rounded-xl p-3 h-20"
+                      placeholder="Instructions text..."
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-surface p-8 rounded-[2.5rem] border border-borderMain space-y-6 shadow-sm md:col-span-2">
+               <div className="flex items-center justify-between pb-4 border-b border-borderMain">
+                  <div className="flex items-center gap-3"><Zap className="text-primary"/><h3 className="text-sm font-black uppercase">Daily Alert Popup</h3></div>
+                  <button onClick={() => setConfig(prev => ({...prev, dailyPopup: {...prev.dailyPopup, enabled: !prev.dailyPopup.enabled}}))} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase ${config.dailyPopup.enabled ? 'bg-primary text-white' : 'bg-slate-100 text-textDim'}`}>{config.dailyPopup.enabled ? <ToggleRight/> : <ToggleLeft/>} Active</button>
+               </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <AdminInput label="Popup Title" value={config.dailyPopup.title} onChange={(v) => setConfig(prev => ({...prev, dailyPopup: {...prev.dailyPopup, title: v}}))} />
+                  <AdminInput label="Action Button Text" value={config.dailyPopup.buttonText} onChange={(v) => setConfig(prev => ({...prev, dailyPopup: {...prev.dailyPopup, buttonText: v}}))} />
+                  <div className="md:col-span-2">
+                    <AdminInput label="Action Button Link" value={config.dailyPopup.buttonLink} onChange={(v) => setConfig(prev => ({...prev, dailyPopup: {...prev.dailyPopup, buttonLink: v}}))} />
+                  </div>
+                  <div className="md:col-span-2 space-y-1.5">
+                    <label className="text-[10px] font-black uppercase text-textDim tracking-widest px-1">Message Body Content</label>
+                    <textarea value={config.dailyPopup.content} onChange={(e) => setConfig(prev => ({...prev, dailyPopup: {...prev.dailyPopup, content: e.target.value}}))} className="w-full bg-bgMain rounded-xl px-4 py-3 text-xs font-bold border border-borderMain outline-none text-textMain h-24" />
+                  </div>
+               </div>
+            </div>
+
+            <button onClick={saveConfig} disabled={isSaving} className="md:col-span-2 w-full py-5 bg-primary text-white font-black uppercase rounded-3xl shadow-xl flex items-center justify-center gap-3 disabled:opacity-50">
+              {isSaving ? <Loader2 className="animate-spin" /> : <Save size={18} />} Synchronize Content
             </button>
           </div>
         ) : (

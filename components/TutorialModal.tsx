@@ -1,6 +1,7 @@
-
-import React from 'react';
-import { X, Play, ShieldCheck, Sparkles, Upload, FileText, Download, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Play, ShieldCheck, Sparkles, Upload, FileText, Download, CheckCircle2, Loader2, Info, Diamond, Hexagon, HelpCircle } from 'lucide-react';
+import { rtdb, ref, onValue } from '../services/firebase';
+import { SystemConfig } from '../types';
 
 interface TutorialModalProps {
   isOpen: boolean;
@@ -8,7 +9,28 @@ interface TutorialModalProps {
 }
 
 const TutorialModal: React.FC<TutorialModalProps> = ({ isOpen, onClose }) => {
+  const [config, setConfig] = useState<SystemConfig | null>(null);
+
+  useEffect(() => {
+    const configRef = ref(rtdb, 'system/config');
+    onValue(configRef, (snapshot) => {
+      if (snapshot.exists()) setConfig(snapshot.val());
+    });
+  }, []);
+
   if (!isOpen) return null;
+
+  const steps = config?.tutorial?.steps || [
+    { id: '1', title: "Upload Assets", text: "Drop your Images, SVG, AI, EPS, or Videos (MP4/MOV) into the central cluster hub." },
+    { id: '2', title: "Target Sync", text: "Select the platform (e.g. AdobeStock) to align metadata with their specific SEO rules." },
+    { id: '3', title: "AI Processing", text: "Our Vision AI analyzes subject, composition, and mood to generate high-fidelity tags." },
+    { id: '4', title: "Review & Export", text: "Review the production queue, fine-tune results, and export everything into a ready-to-use CSV." }
+  ];
+
+  const getStepIcon = (index: number) => {
+    const icons = [<Upload size={20} />, <ShieldCheck size={20} />, <Sparkles size={20} />, <FileText size={20} />, <Diamond size={20} />, <Hexagon size={20} />, <HelpCircle size={20} />];
+    return icons[index % icons.length];
+  };
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
@@ -30,30 +52,15 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ isOpen, onClose }) => {
           </div>
 
           <div className="space-y-6">
-            <TutorialStep 
-              number="01" 
-              icon={<Upload size={20} />} 
-              title="Upload Assets" 
-              text="Drop your Images, SVG, AI, EPS, or Videos (MP4/MOV) into the central cluster hub."
-            />
-            <TutorialStep 
-              number="02" 
-              icon={<ShieldCheck size={20} />} 
-              title="Target Sync" 
-              text="Select the platform (e.g. AdobeStock) to align metadata with their specific SEO rules."
-            />
-            <TutorialStep 
-              number="03" 
-              icon={<Sparkles size={20} />} 
-              title="AI Processing" 
-              text="Our Vision AI analyzes subject, composition, and mood to generate high-fidelity tags."
-            />
-            <TutorialStep 
-              number="04" 
-              icon={<FileText size={20} />} 
-              title="Review & Export" 
-              text="Review the production queue, fine-tune results, and export everything into a ready-to-use CSV."
-            />
+            {steps.map((step, idx) => (
+              <TutorialStep 
+                key={step.id}
+                number={String(idx + 1).padStart(2, '0')} 
+                icon={getStepIcon(idx)} 
+                title={step.title} 
+                text={step.text} 
+              />
+            ))}
           </div>
 
           <div className="p-6 bg-green-500/5 border border-green-500/10 rounded-3xl">
@@ -61,7 +68,7 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ isOpen, onClose }) => {
                 <CheckCircle2 size={14} /> Tip
              </div>
              <p className="text-xs text-slate-500 dark:text-green-100/60 font-medium leading-relaxed">
-               Batch processing saves energy. Process multiple files simultaneously to maximize throughput.
+               {config?.site?.footerCredit ? `Mastered by ${config.site.footerCredit}. ` : ''}Process multiple files simultaneously to maximize throughput and save energy.
              </p>
           </div>
 

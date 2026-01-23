@@ -1,4 +1,3 @@
-
 export type Platform = 'General' | 'AdobeStock' | 'Freepik' | 'Shutterstock' | 'Vecteezy' | 'Depositphotos' | '123RF' | 'Dreamstime';
 export type FileType = 'Images' | 'Vectors' | 'Videos';
 export type AIEngine = 'Gemini' | 'Groq';
@@ -18,6 +17,18 @@ export interface AdEntry {
   label: string;
 }
 
+export interface NotificationEntry {
+  id: string;
+  text: string;
+  type: 'info' | 'warning' | 'success';
+}
+
+export interface TutorialStepEntry {
+  id: string;
+  title: string;
+  text: string;
+}
+
 export interface SystemConfig {
   developer: {
     name: string;
@@ -32,6 +43,19 @@ export interface SystemConfig {
     visibility: 'Free' | 'All';
     list: AdEntry[];
     externalScript?: string;
+  };
+  notifications: {
+    list: NotificationEntry[];
+  };
+  tutorial: {
+    steps: TutorialStepEntry[];
+  };
+  dailyPopup: {
+    enabled: boolean;
+    title: string;
+    content: string;
+    buttonText: string;
+    buttonLink: string;
   };
   site: {
     footerCredit: string;

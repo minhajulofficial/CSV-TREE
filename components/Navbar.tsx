@@ -1,13 +1,12 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   LogOut, User as UserIcon, Loader2, 
   Sun, Moon, Crown, RefreshCw, Sparkles, Shield,
-  Settings, Code, ExternalLink, Github, Globe, Menu, X, PlayCircle
+  Settings, Code, ExternalLink, Github, Globe, Menu, X, PlayCircle, Bell, Info, AlertTriangle, CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { AppView, SystemConfig } from '../types';
+import { AppView, SystemConfig, NotificationEntry } from '../types';
 import AuthModal from './AuthModal';
 import { rtdb, ref, onValue } from '../services/firebase';
 
@@ -24,9 +23,11 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchView, onManageKeys, toggleSideb
   const { theme, toggleTheme } = useTheme();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isDevOpen, setIsDevOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [config, setConfig] = useState<SystemConfig | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const devRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const configRef = ref(rtdb, 'system/config');
@@ -40,6 +41,7 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchView, onManageKeys, toggleSideb
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsProfileOpen(false);
       if (devRef.current && !devRef.current.contains(event.target as Node)) setIsDevOpen(false);
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) setIsNotifOpen(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -47,6 +49,7 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchView, onManageKeys, toggleSideb
 
   const isAdmin = user && ADMIN_EMAILS.includes(user.email || '');
   const isPremium = profile?.tier === 'Premium';
+  const notifications = config?.notifications?.list || [];
 
   return (
     <>
@@ -55,14 +58,53 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchView, onManageKeys, toggleSideb
           <button onClick={toggleSidebar} className="md:hidden p-2 text-textDim hover:text-primary transition-colors">
             <Menu size={20} />
           </button>
-          <div className="flex items-center gap-1 text-xl md:text-2xl font-black tracking-tighter group cursor-pointer" onClick={() => onSwitchView('Home')}>
-            <span className="text-primary transition-all">CSV</span>
-            <span className="text-accent">TREE</span>
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => onSwitchView('Home')}>
+            <div className="flex items-center gap-1 text-xl md:text-2xl font-black tracking-tighter group">
+              <span className="text-primary transition-all">CSV</span>
+              <span className="text-accent">TREE</span>
+            </div>
+            {user && (
+              <span className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-full border shadow-sm ${isPremium ? 'bg-primary/10 border-primary text-primary' : 'bg-slate-100 dark:bg-white/5 border-borderMain text-textDim'}`}>
+                {isPremium ? 'PREMIUM' : 'FREE'}
+              </span>
+            )}
           </div>
         </div>
 
         <div className="flex items-center gap-1 md:gap-3">
-          {/* Developer Profile Icon */}
+          {/* Notifications Bell */}
+          <div className="relative" ref={notifRef}>
+            <button 
+              onClick={() => setIsNotifOpen(!isNotifOpen)}
+              className={`p-2.5 rounded-xl transition-all relative ${isNotifOpen ? 'bg-primary/10 text-primary' : 'text-textDim hover:text-primary hover:bg-primary/5'}`}
+              title="Notifications"
+            >
+              <Bell size={20} />
+              {notifications.length > 0 && (
+                <span className="absolute top-2 right-2 w-2 h-2 bg-accent rounded-full border-2 border-white dark:border-bgMain" />
+              )}
+            </button>
+            
+            {isNotifOpen && (
+              <div className="absolute top-full right-0 mt-4 w-72 md:w-80 bg-white dark:bg-surface border border-borderMain rounded-[2rem] shadow-2xl p-6 animate-in zoom-in-95 duration-200 z-[100]">
+                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-textDim mb-4 px-2">Global Comms</h4>
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 no-scrollbar">
+                  {notifications.length > 0 ? notifications.map((notif: NotificationEntry) => (
+                    <div key={notif.id} className={`p-4 rounded-2xl border flex gap-3 ${notif.type === 'warning' ? 'bg-amber-500/5 border-amber-500/10 text-amber-600' : notif.type === 'success' ? 'bg-green-500/5 border-green-500/10 text-green-600' : 'bg-primary/5 border-primary/10 text-primary'}`}>
+                      {notif.type === 'warning' ? <AlertTriangle size={14} className="flex-shrink-0" /> : notif.type === 'success' ? <CheckCircle2 size={14} className="flex-shrink-0" /> : <Info size={14} className="flex-shrink-0" />}
+                      <p className="text-[11px] font-bold leading-relaxed">{notif.text}</p>
+                    </div>
+                  )) : (
+                    <div className="py-8 text-center space-y-2 opacity-30">
+                      <Bell size={24} className="mx-auto" />
+                      <p className="text-[9px] font-black uppercase tracking-widest">No New Alerts</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="relative" ref={devRef}>
             <button 
               onClick={() => setIsDevOpen(!isDevOpen)}
