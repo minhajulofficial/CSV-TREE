@@ -1,19 +1,32 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { AppSettings, APIKeyRecord } from "../types";
 
 /**
  * Parses and validates JSON output from Gemini responses.
+ * Ensuring categories are always treated as an array.
  */
 const parseAIResponse = (text: string | undefined) => {
   if (!text) throw new Error("AI returned empty content.");
   try {
     const trimmed = text.trim();
-    return JSON.parse(trimmed);
+    const data = JSON.parse(trimmed);
+    
+    // Safety check for categories
+    if (data.categories && !Array.isArray(data.categories)) {
+      data.categories = [String(data.categories)];
+    }
+    
+    return data;
   } catch (e) {
     const match = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/{[\s\S]*}/);
     if (match) {
       try {
-        return JSON.parse(match[1] || match[0]);
+        const data = JSON.parse(match[1] || match[0]);
+        if (data.categories && !Array.isArray(data.categories)) {
+          data.categories = [String(data.categories)];
+        }
+        return data;
       } catch (innerError) {
         throw new Error("Invalid metadata format received from AI.");
       }
@@ -42,14 +55,16 @@ export const processImageWithGemini = async (imageBase64: string, settings: AppS
 
     if (settings.mode === 'Metadata') {
       promptText = `
-        CORE MISSION: Extract professional microstock metadata.
-        Target Platform: ${settings.platform}. Asset: "${fileName}".
+        CORE MISSION: Extract professional microstock metadata for ${settings.platform}. 
+        Asset Name: "${fileName}".
         
         CONSTRAINTS:
-        - Title: Descriptive SEO-friendly (${settings.minTitle}-${settings.maxTitle} words).
-        - Keywords: Exactly ${settings.maxKeywords} tags. ${settings.singleWordKeywords ? 'STRICT: Single-word only.' : ''}
-        - Description: Visual technical summary (${settings.minDesc}-${settings.maxDesc} words).
-        - Categories: 2 standard categories.
+        1. TITLE: Descriptive SEO-friendly (${settings.minTitle}-${settings.maxTitle} words).
+        2. KEYWORDS: Exactly ${settings.maxKeywords} relevant tags. ${settings.singleWordKeywords ? 'STRICT: Single-word only.' : ''}
+        3. DESCRIPTION: Technical visual summary (${settings.minDesc}-${settings.maxDesc} words).
+        4. CATEGORIES: Provide at least 2 relevant stock categories (e.g., Nature, Technology, People).
+        
+        Return the result in JSON format ONLY.
       `;
 
       schema = {
@@ -57,7 +72,7 @@ export const processImageWithGemini = async (imageBase64: string, settings: AppS
         properties: {
           title: { type: Type.STRING },
           keywords: { type: Type.ARRAY, items: { type: Type.STRING } },
-          categories: { type: Type.ARRAY, items: { type: Type.STRING } },
+          categories: { type: Type.ARRAY, items: { type: Type.STRING }, description: "At least 2 stock categories" },
           description: { type: Type.STRING }
         },
         required: ["title", "keywords", "categories", "description"]

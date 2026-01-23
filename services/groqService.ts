@@ -1,3 +1,4 @@
+
 import { AppSettings } from "../types";
 
 /**
@@ -16,12 +17,15 @@ export const processImageWithGroq = async (imageBase64: string, settings: AppSet
       
       Schema:
       {
-        "title": "${settings.minTitle}-${settings.maxTitle} words",
+        "title": "SEO title (${settings.minTitle}-${settings.maxTitle} words)",
         "keywords": [exactly ${settings.maxKeywords} tags],
-        "categories": ["Cat1", "Cat2"],
+        "categories": ["Category 1", "Category 2"],
         "description": "${settings.minDesc}-${settings.maxDesc} words"
       }
-      ${settings.singleWordKeywords ? 'STRICT: Keywords must be single words.' : ''}
+      
+      Rules:
+      - Categories MUST be an array of strings.
+      ${settings.singleWordKeywords ? '- Keywords must be single words.' : ''}
     `;
   } else {
     systemPrompt = `Analyze image and return a detailed AI generation prompt as JSON: { "prompt": "..." }`;
@@ -61,7 +65,14 @@ export const processImageWithGroq = async (imageBase64: string, settings: AppSet
     }
 
     const data = await response.json();
-    return JSON.parse(data.choices[0].message.content);
+    const result = JSON.parse(data.choices[0].message.content);
+    
+    // Final check for categories array
+    if (result.categories && !Array.isArray(result.categories)) {
+      result.categories = [String(result.categories)];
+    }
+    
+    return result;
   } catch (error: any) {
     console.error("Groq Processing Error:", error);
     throw new Error(error.message || "Failed to analyze via Groq.");
