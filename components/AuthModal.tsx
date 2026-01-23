@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { X, Mail, Lock, User, Chrome, ArrowRight, Loader2, AlertCircle, Sparkles } from 'lucide-react';
+import { X, Mail, Lock, User, Chrome, ArrowRight, Loader2, AlertCircle, Sparkles, ExternalLink } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const AuthModal: React.FC = () => {
@@ -11,13 +10,14 @@ const AuthModal: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { user, loginWithGoogle, loginWithEmail, registerWithEmail, resetPassword, error, clearError, isAuthModalOpen, setAuthModalOpen } = useAuth();
 
-  // Robust closure logic
+  // Handle closing modal on successful auth
   useEffect(() => {
     if (user && isAuthModalOpen) {
       setAuthModalOpen(false);
     }
   }, [user, isAuthModalOpen, setAuthModalOpen]);
 
+  // Reset state when modal closes
   useEffect(() => {
     if (!isAuthModalOpen) { 
       setLoading(false); 
@@ -36,9 +36,15 @@ const AuthModal: React.FC = () => {
     if (loading) return;
     setLoading(true);
     try {
-      if (mode === 'login') { await loginWithEmail(email, password); }
-      else if (mode === 'signup') { await registerWithEmail(email, password, name); }
-      else { await resetPassword(email); alert('Check your email for reset link.'); setMode('login'); }
+      if (mode === 'login') {
+        await loginWithEmail(email, password);
+      } else if (mode === 'signup') {
+        await registerWithEmail(email, password, name);
+      } else {
+        await resetPassword(email);
+        alert('Check your email for reset link.');
+        setMode('login');
+      }
     } catch (err) {
       setLoading(false);
     }
@@ -49,16 +55,24 @@ const AuthModal: React.FC = () => {
     setLoading(true);
     try { 
       await loginWithGoogle(); 
-    } catch (err) {
+    } catch (err: any) {
       setLoading(false);
+      console.error("Auth Popup Error:", err);
     }
   };
 
+  const isDomainError = error?.includes('unauthorized-domain') || error?.includes('auth/unauthorized-domain');
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-[#0a0c10]/95 backdrop-blur-md animate-in fade-in duration-300" onClick={() => !loading && setAuthModalOpen(false)} />
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-[#0a0c10]/90 backdrop-blur-sm animate-in fade-in duration-300" 
+        onClick={() => !loading && setAuthModalOpen(false)} 
+      />
       
-      <div className="relative w-full max-w-lg bg-white dark:bg-[#12161f] rounded-[2.5rem] shadow-2xl border border-black/5 dark:border-white/5 overflow-hidden animate-in zoom-in-95 duration-300">
+      {/* Modal Card */}
+      <div className="relative w-full max-w-[440px] bg-white dark:bg-[#12161f] rounded-[2.5rem] shadow-2xl border border-black/5 dark:border-white/5 overflow-hidden animate-in zoom-in-95 duration-300">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2" />
         
         <button 
@@ -69,49 +83,70 @@ const AuthModal: React.FC = () => {
           <X size={20} />
         </button>
 
-        <div className="p-10 md:p-14 relative z-10">
-          <div className="text-center mb-10">
+        <div className="p-10 md:p-12 relative z-10">
+          <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-[0.4em] mb-4">
-              <Sparkles size={12} /> Secure Login
+              <Sparkles size={12} /> Secure Gateway
             </div>
             <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">
-              {mode === 'login' ? 'Welcome Back' : mode === 'signup' ? 'Create Account' : 'Recovery'}
+              {mode === 'login' ? 'Authentication' : mode === 'signup' ? 'Create Identity' : 'Recovery'}
             </h2>
             <p className="text-slate-500 dark:text-gray-500 text-sm font-medium opacity-80">
-              {mode === 'login' ? 'Enter your workspace' : 'Join our microstock network'}
+              {mode === 'login' ? 'Access your metadata workspace' : 'Join the microstock automation network'}
             </p>
           </div>
 
           {error && (
-            <div className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-4 text-xs text-red-500">
-              <AlertCircle size={18} className="mt-0.5 flex-shrink-0" />
-              <p className="font-medium">{error}</p>
+            <div className={`mb-6 p-4 rounded-2xl flex flex-col gap-2 text-xs border ${isDomainError ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
+              <div className="flex items-start gap-3">
+                <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+                <div className="space-y-1">
+                  <p className="font-black uppercase tracking-widest">{isDomainError ? 'Domain Unauthorized' : 'System Error'}</p>
+                  <p className="font-medium leading-relaxed">
+                    {isDomainError 
+                      ? "This domain isn't authorized in Firebase. Please add this URL to 'Authorized Domains' in your Firebase Authentication settings." 
+                      : error}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
           <div className="space-y-4">
             {mode !== 'reset' && (
-              <button onClick={handleGoogleAuth} disabled={loading} className="w-full flex items-center justify-center gap-4 bg-slate-50 dark:bg-white text-slate-900 dark:text-[#0a0c10] border border-black/5 dark:border-none py-4 rounded-xl font-bold hover:brightness-95 transition-all active:scale-[0.98] disabled:opacity-50 text-[10px] uppercase tracking-widest shadow-sm">
+              <button 
+                onClick={handleGoogleAuth} 
+                disabled={loading} 
+                className="w-full flex items-center justify-center gap-4 bg-white dark:bg-white/5 text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 py-3.5 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-white/10 transition-all active:scale-[0.98] disabled:opacity-50 text-[10px] uppercase tracking-widest shadow-sm"
+              >
                 {loading ? <Loader2 size={18} className="animate-spin" /> : <Chrome size={18} />}
                 Continue with Google
               </button>
             )}
 
             {mode !== 'reset' && (
-              <div className="flex items-center gap-6 my-8">
-                <div className="h-px flex-1 bg-black/5 dark:bg-white/5" />
+              <div className="flex items-center gap-4 my-6">
+                <div className="h-px flex-1 bg-slate-100 dark:bg-white/10" />
                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-300 dark:text-gray-600">OR</span>
-                <div className="h-px flex-1 bg-black/5 dark:bg-white/5" />
+                <div className="h-px flex-1 bg-slate-100 dark:bg-white/10" />
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
               {mode === 'signup' && (
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase px-1 tracking-widest">Full Name</label>
                   <div className="relative group">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 dark:text-gray-600 group-focus-within:text-primary transition-colors" size={18} />
-                    <input required type="text" placeholder="Your name" value={name} onChange={e => setName(e.target.value)} disabled={loading} className="w-full bg-slate-50 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl py-3.5 pl-12 pr-6 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-primary/40 transition-all disabled:opacity-50" />
+                    <input 
+                      required 
+                      type="text" 
+                      placeholder="Your name" 
+                      value={name} 
+                      onChange={e => setName(e.target.value)} 
+                      disabled={loading} 
+                      className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl py-3.5 pl-12 pr-6 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/5 transition-all disabled:opacity-50" 
+                    />
                   </div>
                 </div>
               )}
@@ -120,7 +155,15 @@ const AuthModal: React.FC = () => {
                 <label className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase px-1 tracking-widest">Email Address</label>
                 <div className="relative group">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 dark:text-gray-600 group-focus-within:text-primary transition-colors" size={18} />
-                  <input required type="email" placeholder="name@email.com" value={email} onChange={e => setEmail(e.target.value)} disabled={loading} className="w-full bg-slate-50 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl py-3.5 pl-12 pr-6 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-primary/40 transition-all disabled:opacity-50" />
+                  <input 
+                    required 
+                    type="email" 
+                    placeholder="name@email.com" 
+                    value={email} 
+                    onChange={e => setEmail(e.target.value)} 
+                    disabled={loading} 
+                    className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl py-3.5 pl-12 pr-6 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/5 transition-all disabled:opacity-50" 
+                  />
                 </div>
               </div>
 
@@ -128,32 +171,51 @@ const AuthModal: React.FC = () => {
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center px-1">
                     <label className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-widest">Password</label>
-                    {mode === 'login' && <button type="button" disabled={loading} onClick={() => { setMode('reset'); clearError(); }} className="text-[10px] font-bold text-primary hover:underline uppercase tracking-widest">Forgot?</button>}
+                    {mode === 'login' && (
+                      <button 
+                        type="button" 
+                        disabled={loading} 
+                        onClick={() => { setMode('reset'); clearError(); }} 
+                        className="text-[10px] font-bold text-primary hover:underline uppercase tracking-widest"
+                      >
+                        Forgot?
+                      </button>
+                    )}
                   </div>
                   <div className="relative group">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 dark:text-gray-600 group-focus-within:text-primary transition-colors" size={18} />
-                    <input required type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} disabled={loading} className="w-full bg-slate-50 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl py-3.5 pl-12 pr-6 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-primary/40 transition-all disabled:opacity-50" />
+                    <input 
+                      required 
+                      type="password" 
+                      placeholder="••••••••" 
+                      value={password} 
+                      onChange={e => setPassword(e.target.value)} 
+                      disabled={loading} 
+                      className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl py-3.5 pl-12 pr-6 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/5 transition-all disabled:opacity-50" 
+                    />
                   </div>
                 </div>
               )}
 
-              <button type="submit" disabled={loading} className="w-full flex items-center justify-center gap-3 bg-primary text-[#0a0c10] py-4 rounded-xl font-bold hover:brightness-110 transition-all shadow-xl shadow-primary/20 active:scale-[0.98] disabled:opacity-50 mt-6 uppercase tracking-widest text-[10px]">
-                {loading ? <Loader2 size={20} className="animate-spin" /> : (
-                  <>
-                    {mode === 'login' ? 'Sign In' : mode === 'signup' ? 'Get Started' : 'Recover'}
-                    <ArrowRight size={18} />
-                  </>
-                )}
+              <button 
+                type="submit" 
+                disabled={loading} 
+                className="w-full bg-primary text-[#0a0c10] py-4 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-primary/20 hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
+                {mode === 'login' ? 'Authenticate' : mode === 'signup' ? 'Create Account' : 'Recover Access'}
               </button>
             </form>
-          </div>
 
-          <div className="mt-10 text-center text-[10px] text-slate-400 dark:text-gray-600 font-bold uppercase tracking-widest">
-            {mode === 'login' ? (
-              <p>New user? <button disabled={loading} onClick={() => { setMode('signup'); clearError(); }} className="text-primary hover:underline">Join free</button></p>
-            ) : (
-              <p>Have account? <button disabled={loading} onClick={() => { setMode('login'); clearError(); }} className="text-primary hover:underline">Sign In</button></p>
-            )}
+            <div className="mt-8 text-center">
+              <button 
+                onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); clearError(); }} 
+                disabled={loading}
+                className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-primary transition-colors"
+              >
+                {mode === 'login' ? "New Operator? Create Account" : "Registered Identity? Authenticate"}
+              </button>
+            </div>
           </div>
         </div>
       </div>

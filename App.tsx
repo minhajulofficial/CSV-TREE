@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, X, ArrowLeft, Play, FileCode, Film, FileImage, AlertCircle, ExternalLink, ChevronLeft, ChevronRight, Check, Heart, Shield, Sparkles } from 'lucide-react';
+import { Upload, Download, X, Play, AlertCircle, ExternalLink, Loader2 } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
@@ -10,13 +10,13 @@ import ManageKeysModal from './components/ManageKeysModal';
 import SuccessModal from './components/SuccessModal';
 import TutorialModal from './components/TutorialModal';
 import { DEFAULT_SETTINGS } from './constants';
-import { AppSettings, ExtractedMetadata, AppView, APIKeyRecord, SystemConfig } from './types';
+import { AppSettings, ExtractedMetadata, AppView, APIKeyRecord, SystemConfig, Platform } from './types';
 import { processImageWithGemini } from './services/geminiService';
 import { processImageWithGroq } from './services/groqService';
 import { useAuth } from './contexts/AuthContext';
 import { rtdb, ref, onValue, set, remove, push, update } from './services/firebase';
 
-const VECTOR_PLACEHOLDER_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAACXBIWXMAAAsTAAALEwEAmpwYAAAByUlEQVR4nO3SQRHAIBDAsMUE/p1SInz0kgmS2dtz7z13AOzM9wXAmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vvyA6LPAwS4VAnIAAAAAElFTkSuQmCC";
+const VECTOR_PLACEHOLDER_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAACXBIWXMAAAsTAAALEwEAmpwYAAAByUlEQVR4nO3SQRHAIBDAsMUE/p1SInz0kgmS2dtz7z13AOzM9wXAmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vvyA6LPAwS4VAnIAAAAAElFTkSuQmCC";
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>('Home');
@@ -78,10 +78,6 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, [user]);
 
-  /**
-   * Sanitizes and optimizes image data for AI Vision APIs.
-   * Fixes drawImage error by ensuring the source is a valid Drawable.
-   */
   const sanitizeImage = (source: string | HTMLImageElement | HTMLVideoElement): Promise<string> => {
     return new Promise((resolve) => {
       const process = (drawable: HTMLImageElement | HTMLVideoElement) => {
@@ -274,12 +270,42 @@ const App: React.FC = () => {
   const downloadAllCSV = () => {
     const completedItems = items.filter(i => i.status === 'completed');
     if (completedItems.length === 0) return;
+    
     const isPromptMode = completedItems[0].prompt !== undefined;
-    const headers = isPromptMode ? ['Filename', 'Prompt'] : ['Filename', 'Title', 'Keywords', 'Category', 'Description'];
-    const rows = completedItems.map(i => isPromptMode ? [i.fileName, i.prompt || ''] : [i.fileName, i.title || '', (i.keywords || []).join(', '), (i.categories || []).join(', '), i.description || '']);
-    const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].map(e => e.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(",")).join("\n");
+    let headers: string[] = [];
+    let rows: any[][] = [];
+
+    if (isPromptMode) {
+      headers = ['Filename', 'Prompt'];
+      rows = completedItems.map(i => [i.fileName, i.prompt || '']);
+    } else {
+      // Platform Specific Header Mapping
+      switch (settings.platform) {
+        case 'AdobeStock':
+          headers = ['Filename', 'Title', 'Keywords'];
+          rows = completedItems.map(i => [i.fileName, i.title || '', (i.keywords || []).join(', ')]);
+          break;
+        case 'Shutterstock':
+          headers = ['Filename', 'Description', 'Keywords', 'Categories'];
+          rows = completedItems.map(i => [i.fileName, i.title || '', (i.keywords || []).join(', '), (i.categories || []).join(', ')]);
+          break;
+        case 'Freepik':
+          headers = ['File name', 'Title', 'Keywords'];
+          rows = completedItems.map(i => [i.fileName, i.title || '', (i.keywords || []).join(',')]);
+          break;
+        case 'Vecteezy':
+          headers = ['Filename', 'Title', 'Description', 'Keywords'];
+          rows = completedItems.map(i => [i.fileName, i.title || '', i.description || '', (i.keywords || []).join(', ')]);
+          break;
+        default:
+          headers = ['Filename', 'Title', 'Keywords', 'Description', 'Categories'];
+          rows = completedItems.map(i => [i.fileName, i.title || '', (i.keywords || []).join(', '), i.description || '', (i.categories || []).join(', ')]);
+      }
+    }
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].map(e => e.map(cell => `"${String(cell || '').replace(/"/g, '""')}"`).join(",")).join("\n");
     const link = document.createElement("a");
-    link.setAttribute("href", encodeURI(csvContent)); link.setAttribute("download", `CSV_Metadata_${Date.now()}.csv`);
+    link.setAttribute("href", encodeURI(csvContent)); link.setAttribute("download", `${settings.platform}_Metadata_${Date.now()}.csv`);
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
   };
 
@@ -315,7 +341,7 @@ const App: React.FC = () => {
                         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/20 to-transparent flex items-center px-8 md:px-12">
                            <div className="space-y-1">
                               <div className="flex items-center gap-1.5 text-primary font-black uppercase text-[8px]"><AlertCircle size={10} /> RECOMMENDED</div>
-                              <p className="text-white text-base md:text-xl font-black italic uppercase tracking-tighter leading-none">Elevate Your Presence</p>
+                              <p className="text-white text-base md:text-xl font-black italic uppercase tracking-tighter leading-none">Optimize Workflow</p>
                               <button className="mt-2 bg-white text-black px-4 py-1.5 rounded-lg text-[9px] font-black uppercase shadow-lg">View <ExternalLink size={10} /></button>
                            </div>
                         </div>
@@ -333,13 +359,13 @@ const App: React.FC = () => {
             <PlatformPills selected={settings.platform} onSelect={(p) => setSettings(s => ({ ...s, platform: p }))} />
             <div onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop} className={`group relative rounded-[2rem] md:rounded-[3rem] p-12 md:p-24 flex flex-col items-center justify-center gap-6 transition-all border-2 border-dashed ${isDragging ? 'bg-green-50/50 border-green-500' : 'bg-white dark:bg-surface border-slate-200 dark:border-white/5'}`}>
               <div className="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center text-green-500 mb-4 group-hover:scale-110 transition-transform"><Upload size={40} /></div>
-              <div className="text-center space-y-2"><h2 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white">Drag & Drop Protocol</h2><p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">or click to browse local files</p></div>
+              <div className="text-center space-y-2"><h2 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white">Upload Assets</h2><p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">or drag & drop images/videos</p></div>
               <input type="file" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileUpload} accept="image/*,video/*,.svg,.ai,.eps" />
             </div>
             {items.length > 0 && (
               <div className="mt-16 md:mt-28 space-y-10">
                 <div className="md:sticky top-20 z-30 space-y-6">
-                  <div className="flex justify-center mb-8"><button onClick={startBatchProcess} disabled={isProcessing || pendingCount === 0} className="bg-green-500 text-white px-10 py-4 rounded-full font-black uppercase tracking-widest flex items-center gap-3 shadow-xl hover:brightness-110 active:scale-95 disabled:opacity-50">{isProcessing ? <Loader2 className="animate-spin" size={20} /> : <Play size={20} fill="currentColor" />}{isProcessing ? 'Engine Processing...' : `Process Assets (${items.length})`}</button></div>
+                  <div className="flex justify-center mb-8"><button onClick={startBatchProcess} disabled={isProcessing || pendingCount === 0} className="bg-green-500 text-white px-10 py-4 rounded-full font-black uppercase tracking-widest flex items-center gap-3 shadow-xl hover:brightness-110 active:scale-95 disabled:opacity-50">{isProcessing ? <Loader2 className="animate-spin" size={20} /> : <Play size={20} fill="currentColor" />}{isProcessing ? 'Processing Cluster...' : `Process All Assets (${items.length})`}</button></div>
                   <div className="bg-white dark:bg-surface border border-borderMain rounded-3xl p-6 shadow-xl flex flex-col md:flex-row justify-between gap-6">
                     <div className="flex items-center gap-8 text-[11px] font-black uppercase text-slate-400">
                       <span>Total: <span className="text-slate-800 dark:text-white">{items.length}</span></span>
@@ -347,18 +373,18 @@ const App: React.FC = () => {
                     </div>
                     <div className="flex gap-4">
                       <button onClick={() => user && remove(ref(rtdb, `metadata/${user.uid}`))} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-red-100 text-[9px] font-black uppercase text-red-500 hover:bg-red-50 transition-all"><X size={14} /> Clear</button>
-                      <button onClick={downloadAllCSV} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 text-white text-[9px] font-black uppercase hover:brightness-110 shadow-lg"><Download size={14} /> Export</button>
+                      <button onClick={downloadAllCSV} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 text-white text-[9px] font-black uppercase hover:brightness-110 shadow-lg"><Download size={14} /> Export CSV</button>
                     </div>
                   </div>
                   <div className="h-2 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden"><div className="h-full bg-green-500 transition-all duration-1000" style={{ width: `${(completedCount / items.length) * 100}%` }} /></div>
                 </div>
-                <div className="space-y-8 pb-20">{items.map(item => (<ResultCard key={item.id} item={item} onRegenerate={() => processBatch([item])} onDelete={() => user && remove(ref(rtdb, `metadata/${user.uid}/${item.id}`))} onUpdate={updateItemLocal}/>))}</div>
+                <div className="space-y-12 pb-20">{items.map(item => (<ResultCard key={item.id} item={item} onRegenerate={() => processBatch([item])} onDelete={() => user && remove(ref(rtdb, `metadata/${user.uid}/${item.id}`))} onUpdate={updateItemLocal} onDownloadCSV={downloadAllCSV}/>))}</div>
               </div>
             )}
           </div>
         ) : (
-          <div className="max-w-4xl mx-auto py-12 md:py-24 px-4">
-             {/* Secondary views handled here */}
+          <div className="max-w-4xl mx-auto py-12 md:py-24 px-4 text-center">
+             <h2 className="text-2xl font-black uppercase tracking-widest opacity-20">View Restricted</h2>
           </div>
         )}
       </main>
@@ -369,9 +395,5 @@ const App: React.FC = () => {
     </div>
   );
 };
-
-const Loader2 = ({ className, size }: { className?: string, size?: number }) => (
-  <svg className={`animate-spin ${className}`} width={size || 16} height={size || 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-);
 
 export default App;
