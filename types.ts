@@ -12,6 +12,12 @@ export interface APIKeyRecord {
   createdAt: string;
 }
 
+export interface AdEntry {
+  image: string;
+  link: string;
+  label: string;
+}
+
 export interface SystemConfig {
   developer: {
     name: string;
@@ -24,9 +30,8 @@ export interface SystemConfig {
   ads: {
     enabled: boolean;
     visibility: 'Free' | 'All';
-    image: string;
-    link: string;
-    label: string;
+    list: AdEntry[];
+    externalScript?: string;
   };
 }
 

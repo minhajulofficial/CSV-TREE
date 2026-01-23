@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, X, Layers, ArrowLeft, Play, LayoutGrid, CheckCircle, ShieldCheck, FileCode, Film, FileImage, AlertCircle, ExternalLink } from 'lucide-react';
+import { Upload, Download, X, ArrowLeft, Play, FileCode, Film, FileImage, AlertCircle, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
@@ -11,13 +11,13 @@ import ManageKeysModal from './components/ManageKeysModal';
 import SuccessModal from './components/SuccessModal';
 import TutorialModal from './components/TutorialModal';
 import { DEFAULT_SETTINGS } from './constants';
-import { AppSettings, ExtractedMetadata, FileType, AppView, APIKeyRecord, SystemConfig } from './types';
+import { AppSettings, ExtractedMetadata, AppView, APIKeyRecord, SystemConfig } from './types';
 import { processImageWithGemini } from './services/geminiService';
 import { processImageWithGroq } from './services/groqService';
 import { useAuth } from './contexts/AuthContext';
 import { rtdb, ref, onValue, set, remove, push, update } from './services/firebase';
 
-const VECTOR_PLACEHOLDER_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAACXBIWXMAAAsTAAALEwEAmpwYAAAByUlEQVR4nO3SQRHAIBDAsMUE/p1SInz0kgmS2dtz7z13AOzM9wXAmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vvyA6LPAwS4VAnIAAAAAElFTkSuQmCC";
+const VECTOR_PLACEHOLDER_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAACXBIWXMAAAsTAAALEwEAmpwYAAAByUlEQVR4nO3SQRHAIBDAsMUE/p1SInz0kgmS2dtz7z13AOzM9wXAmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vvyA6LPAwS4VAnIAAAAAElFTkSuQmCC";
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>('Home');
@@ -31,6 +31,7 @@ const App: React.FC = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [sysConfig, setSysConfig] = useState<SystemConfig | null>(null);
+  const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const { user, profile, deductCredit, setAuthModalOpen } = useAuth();
 
   useEffect(() => {
@@ -39,6 +40,41 @@ const App: React.FC = () => {
       if (snapshot.exists()) setSysConfig(snapshot.val());
     });
   }, []);
+
+  // Ad Sliding Timer
+  useEffect(() => {
+    const ads = sysConfig?.ads?.list || [];
+    if (ads.length > 1) {
+      const timer = setInterval(() => {
+        setCurrentAdIndex(prev => (prev + 1) % ads.length);
+      }, 5000);
+      return () => clearInterval(timer);
+    }
+  }, [sysConfig?.ads?.list?.length]);
+
+  // Handle External Ad Scripts Injection
+  useEffect(() => {
+    if (sysConfig?.ads?.externalScript) {
+      const scriptId = 'external-ad-script';
+      if (!document.getElementById(scriptId)) {
+        const div = document.createElement('div');
+        div.id = scriptId;
+        div.innerHTML = sysConfig.ads.externalScript;
+        const scripts = div.getElementsByTagName('script');
+        for (let i = 0; i < scripts.length; i++) {
+          const s = document.createElement('script');
+          if (scripts[i].src) {
+            s.src = scripts[i].src;
+            s.async = true;
+          } else {
+            s.textContent = scripts[i].textContent;
+          }
+          document.body.appendChild(s);
+        }
+        document.body.appendChild(div);
+      }
+    }
+  }, [sysConfig]);
 
   useEffect(() => {
     const saved = localStorage.getItem('csv-tree-settings');
@@ -106,7 +142,6 @@ const App: React.FC = () => {
   const processFile = async (file: File): Promise<ExtractedMetadata> => {
     const extension = file.name?.split('.').pop()?.toLowerCase() || '';
     let thumbnail = VECTOR_PLACEHOLDER_B64;
-
     try {
       if (file.type?.startsWith('image/') && extension !== 'svg') {
         thumbnail = await new Promise((resolve) => {
@@ -126,7 +161,6 @@ const App: React.FC = () => {
     } catch (e) {
       console.error("Preview error for:", file.name, e);
     }
-
     return {
       id: '',
       thumbnail,
@@ -139,12 +173,10 @@ const App: React.FC = () => {
     if (!user) { setAuthModalOpen(true); return; }
     const files = Array.from(e.target.files || []) as File[];
     if (files.length === 0) return;
-    
     if (profile && profile.credits < files.length) {
       setGlobalError(`Insufficient Credits. You have ${profile.credits} units remaining.`);
       return;
     }
-
     for (const file of files) { 
       try {
         const item = await processFile(file);
@@ -168,26 +200,20 @@ const App: React.FC = () => {
     if (!user) return;
     setIsProcessing(true);
     setGlobalError(null);
-
     for (const item of batch) {
       const itemRef = ref(rtdb, `metadata/${user.uid}/${item.id}`);
       const currentProfile = profile; 
-      
       if (!currentProfile || currentProfile.credits <= 0) {
         await update(itemRef, { status: 'error' });
         setGlobalError("Batch stopped: Out of credits.");
         break;
       }
-
       await update(itemRef, { status: 'processing' });
-      
       try {
         const geminiKey = (Object.values(profile?.apiKeys || {}) as APIKeyRecord[]).find(k => k.provider === 'Gemini')?.key;
         const groqKey = (Object.values(profile?.apiKeys || {}) as APIKeyRecord[]).find(k => k.provider === 'Groq')?.key;
-
         let result;
         let detectedEngine: 'Gemini' | 'Groq' = 'Gemini';
-
         if (geminiKey) {
           result = await processImageWithGemini(item.thumbnail, settings, item.fileName, profile?.apiKeys);
           detectedEngine = 'Gemini';
@@ -198,7 +224,6 @@ const App: React.FC = () => {
           result = await processImageWithGemini(item.thumbnail, settings, item.fileName, profile?.apiKeys);
           detectedEngine = 'Gemini';
         }
-
         const success = await deductCredit(1);
         if (success) {
           await update(itemRef, { ...result, status: 'completed', engine: detectedEngine });
@@ -256,6 +281,7 @@ const App: React.FC = () => {
   };
 
   const showAd = sysConfig?.ads?.enabled && (sysConfig.ads.visibility === 'All' || (sysConfig.ads.visibility === 'Free' && profile?.tier !== 'Premium'));
+  const adsList = sysConfig?.ads?.list || [];
 
   if (view === 'Admin') return <AdminView onBack={() => setView('Home')} />;
 
@@ -268,7 +294,50 @@ const App: React.FC = () => {
       <Sidebar settings={settings} setSettings={setSettings} onManageKeys={() => setKeysModalOpen(true)} isOpen={isSidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <main className="md:pl-[280px] pt-16 flex-grow transition-all">
-        <div className="max-w-6xl mx-auto px-4 md:px-10 py-8 md:py-16">
+        <div className="max-w-6xl mx-auto px-4 md:px-10 py-8 md:py-12">
+          
+          {/* TOP AD SECTION (HERO SLIDER) */}
+          {showAd && adsList.length > 0 && (
+            <div className="mb-12 animate-in slide-in-from-top-4 duration-700">
+              <div className="relative group overflow-hidden rounded-[2rem] border border-borderMain bg-white dark:bg-surface shadow-2xl h-24 md:h-32">
+                <div 
+                  className="flex transition-transform duration-700 ease-in-out h-full"
+                  style={{ transform: `translateX(-${currentAdIndex * 100}%)` }}
+                >
+                  {adsList.map((ad, idx) => (
+                    <a key={idx} href={ad.link} target="_blank" className="min-w-full h-full relative group/item">
+                      <div className="absolute top-3 right-5 z-10 bg-black/60 backdrop-blur px-3 py-1 rounded-full text-[8px] font-black text-white uppercase tracking-widest border border-white/10">{ad.label || 'SPONSORED'}</div>
+                      <img src={ad.image} alt={`Ad ${idx}`} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/20 to-transparent flex items-center px-8 md:px-12">
+                         <div className="space-y-1">
+                            <div className="flex items-center gap-1.5 text-primary font-black uppercase tracking-[0.2em] text-[8px]">
+                              <AlertCircle size={10} /> Recommended Unit
+                            </div>
+                            <p className="text-white text-base md:text-xl font-black italic uppercase tracking-tighter leading-none max-w-sm">Elevate Your Content Workflow</p>
+                            <button className="mt-2 bg-white text-black px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-2 hover:gap-3 transition-all shadow-lg">View <ExternalLink size={10} /></button>
+                         </div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+
+                {/* Slider Controls */}
+                {adsList.length > 1 && (
+                  <>
+                    <button onClick={() => setCurrentAdIndex(prev => (prev - 1 + adsList.length) % adsList.length)} className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/20 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/40"><ChevronLeft size={16}/></button>
+                    <button onClick={() => setCurrentAdIndex(prev => (prev + 1) % adsList.length)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/20 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/40"><ChevronRight size={16}/></button>
+                    
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                      {adsList.map((_, idx) => (
+                        <div key={idx} className={`h-1 rounded-full transition-all ${currentAdIndex === idx ? 'w-4 bg-primary' : 'w-1 bg-white/40'}`} />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
           {globalError && (
             <div className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-4 text-xs font-black text-red-500 uppercase tracking-widest animate-in fade-in slide-in-from-top-4">
               <AlertCircle size={20} />
@@ -288,36 +357,17 @@ const App: React.FC = () => {
             <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-green-50 flex items-center justify-center text-green-500 mb-4 transition-transform group-hover:scale-110">
               <Upload size={40} />
             </div>
-
             <div className="text-center space-y-2">
               <h2 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white">Drag & Drop files here</h2>
               <p className="text-slate-400 font-bold">or click to browse</p>
             </div>
-
             <div className="flex items-center gap-4 md:gap-6 text-slate-300 dark:text-slate-600 text-[9px] md:text-[10px] font-black uppercase tracking-widest mt-6">
               <div className="flex items-center gap-1.5"><FileImage size={14} /> IMAGE</div>
               <div className="flex items-center gap-1.5"><FileCode size={14} /> VECTOR</div>
               <div className="flex items-center gap-1.5"><Film size={14} /> VIDEO</div>
             </div>
-
             <input type="file" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileUpload} accept="image/*,video/*,.svg,.ai,.eps" />
           </div>
-
-          {/* Ad Section */}
-          {showAd && sysConfig && (
-            <div className="mt-8">
-              <a href={sysConfig.ads?.link} target="_blank" className="block relative group overflow-hidden rounded-3xl border border-borderMain bg-white dark:bg-surface shadow-lg transition-transform active:scale-[0.99]">
-                <div className="absolute top-4 right-4 z-10 bg-black/40 backdrop-blur px-3 py-1 rounded-full text-[8px] font-black text-white uppercase tracking-widest">{sysConfig.ads?.label || 'SPONSORED'}</div>
-                <img src={sysConfig.ads?.image} alt="Promotion" className="w-full h-32 md:h-48 object-cover group-hover:scale-105 transition-transform duration-700 opacity-90 group-hover:opacity-100" />
-                <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent flex items-center px-10">
-                   <div className="space-y-2">
-                      <p className="text-white text-lg font-black italic uppercase tracking-tighter">Premium Tools & Resources</p>
-                      <button className="bg-white text-black px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 group-hover:gap-3 transition-all">Explore Now <ExternalLink size={12} /></button>
-                   </div>
-                </div>
-              </a>
-            </div>
-          )}
 
           {items.length > 0 && (
             <div className="mt-16 md:mt-28 space-y-10 animate-in fade-in duration-1000">
@@ -332,13 +382,11 @@ const App: React.FC = () => {
                     {isProcessing ? 'Processing Cluster...' : `Process Files (${items.length})`}
                   </button>
                 </div>
-
                 <div className="bg-white dark:bg-surface border border-borderMain rounded-3xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div className="flex items-center gap-4 md:gap-8 text-[9px] md:text-[11px] font-black uppercase tracking-widest text-slate-400 overflow-x-auto no-scrollbar">
                     <span className="flex items-center gap-2 whitespace-nowrap">Total: <span className="text-slate-800 dark:text-white">{items.length}</span></span>
                     <span className="flex items-center gap-2 whitespace-nowrap">Completed: <span className="text-green-500">{completedCount}</span></span>
                   </div>
-                  
                   <div className="flex items-center gap-3 md:gap-4 overflow-x-auto no-scrollbar pb-1 md:pb-0">
                     <button 
                       onClick={() => user && remove(ref(rtdb, `metadata/${user.uid}`))}
@@ -354,7 +402,6 @@ const App: React.FC = () => {
                     </button>
                   </div>
                 </div>
-
                 <div className="h-2 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden shadow-inner">
                   <div 
                     className="h-full bg-green-500 transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(34,197,94,0.5)]" 
@@ -362,7 +409,6 @@ const App: React.FC = () => {
                   />
                 </div>
               </div>
-
               <div className="space-y-6 md:space-y-8 pb-20">
                 {items.map(item => (
                   <ResultCard 
@@ -378,17 +424,10 @@ const App: React.FC = () => {
           )}
         </div>
       </main>
-      
       <Footer onNavigate={setView} />
       <ManageKeysModal isOpen={isKeysModalOpen} onClose={() => setKeysModalOpen(false)} />
-      <SuccessModal 
-        isOpen={isSuccessModalOpen} 
-        onClose={() => setSuccessModalOpen(false)} 
-        count={items.filter(i => i.status === 'completed').length} 
-        onExport={downloadAllCSV}
-      />
+      <SuccessModal isOpen={isSuccessModalOpen} onClose={() => setSuccessModalOpen(false)} count={items.filter(i => i.status === 'completed').length} onExport={downloadAllCSV} />
       <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
-
       <style>{`
         .premium-glow {
           background-image: radial-gradient(circle at 50% 50%, rgba(34, 197, 94, 0.05) 0%, transparent 70%);
