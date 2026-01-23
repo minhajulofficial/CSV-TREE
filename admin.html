@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>COMMAND CENTER | CSV TREE PRO</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: { 
+            primary: '#2563eb', 
+            accent: '#ef4444', 
+            surface: '#ffffff', 
+            bgMain: '#f1f5f9', 
+            borderMain: 'rgba(0,0,0,0.08)' 
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #f1f5f9; color: #0f172a; transition: background 0.3s; }
+    .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(15px); border: 1px solid rgba(0, 0, 0, 0.05); }
+    .dark body { background: #0a0c10; color: white; }
+    .dark .glass { background: rgba(255, 255, 255, 0.03); border-color: rgba(255, 255, 255, 0.08); }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-thumb { background: #2563eb; border-radius: 10px; }
+    .hidden { display: none !important; }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "firebase/app": "https://esm.sh/firebase@12.8.0/app",
+      "firebase/auth": "https://esm.sh/firebase@12.8.0/auth",
+      "firebase/firestore": "https://esm.sh/firebase@12.8.0/firestore"
+    }
+  }
+  </script>
+</head>
+<body class="light overflow-hidden">
+  <div id="adminGate" class="fixed inset-0 bg-white dark:bg-bgMain z-[200] flex items-center justify-center">
+    <div class="text-center space-y-4">
+      <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+      <p class="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Secure Uplink...</p>
+    </div>
+  </div>
+
+  <div class="flex h-screen">
+    <aside class="w-72 border-r border-borderMain flex flex-col p-8 bg-white dark:bg-bgMain/50">
+      <div class="flex items-center gap-1 text-2xl font-black tracking-tighter mb-16 italic">
+        <span class="text-primary">CSV</span><span class="text-accent">MASTER</span>
+      </div>
+      <nav class="flex-1 space-y-4">
+        <button class="w-full text-left p-4 rounded-xl bg-primary/5 text-primary font-black text-[10px] uppercase tracking-widest flex items-center gap-3 border border-primary/10">
+          Dashboard
+        </button>
+        <a href="index.html" class="w-full text-left p-4 rounded-xl text-slate-500 hover:bg-slate-50 transition-all font-black text-[10px] uppercase tracking-widest flex items-center gap-3">
+          Public Site
+        </a>
+      </nav>
+      <div id="adminInfo" class="mt-auto p-4 glass rounded-2xl flex items-center gap-4 shadow-sm"></div>
+    </aside>
+
+    <main class="flex-1 overflow-y-auto p-12">
+      <div class="max-w-6xl mx-auto space-y-12">
+        <div class="flex items-end justify-between">
+          <div class="space-y-1">
+            <h1 class="text-4xl font-black tracking-tight text-slate-900 dark:text-white italic uppercase">Control Center</h1>
+            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-widest">System Resource Management</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div class="glass p-8 rounded-[2rem] shadow-sm">
+            <p class="text-[10px] font-black text-primary uppercase tracking-widest mb-3">Total Operators</p>
+            <h3 id="statUsers" class="text-4xl font-black tracking-tight">0</h3>
+          </div>
+          <div class="glass p-8 rounded-[2rem] shadow-sm">
+            <p class="text-[10px] font-black text-accent uppercase tracking-widest mb-3">Premium Fleet</p>
+            <h3 id="statPremium" class="text-4xl font-black tracking-tight">0</h3>
+          </div>
+          <div class="glass p-8 rounded-[2rem] shadow-sm">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Energy Units</p>
+            <h3 id="statCredits" class="text-4xl font-black tracking-tight">0</h3>
+          </div>
+        </div>
+
+        <div class="glass rounded-[2.5rem] overflow-hidden shadow-sm">
+          <div class="p-8 border-b border-borderMain flex items-center justify-between bg-slate-50/50">
+            <h2 class="text-lg font-black uppercase tracking-tight italic">Registry Database</h2>
+            <input type="text" id="userSearch" placeholder="Search by email..." class="bg-white border border-borderMain rounded-xl px-6 py-3 text-xs font-bold focus:outline-none focus:border-primary/30 w-80 shadow-inner">
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left">
+              <thead>
+                <tr class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-borderMain">
+                  <th class="px-8 py-6">Identity</th>
+                  <th class="px-8 py-6">Tier Status</th>
+                  <th class="px-8 py-6">Fuel Units</th>
+                  <th class="px-10 py-6 text-right">Commands</th>
+                </tr>
+              </thead>
+              <tbody id="userTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="admin.tsx"></script>
+</body>
+</html>

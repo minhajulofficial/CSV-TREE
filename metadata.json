@@ -1,0 +1,7 @@
+{
+  "name": "CSV TREE Pro",
+  "description": "High-speed AI Microstock Metadata Extractor",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
