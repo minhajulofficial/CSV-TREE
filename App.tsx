@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, X, Layers, ArrowLeft, Play, LayoutGrid, CheckCircle, ShieldCheck, FileCode, Film, FileImage } from 'lucide-react';
+import { Upload, Download, X, Layers, ArrowLeft, Play, LayoutGrid, CheckCircle, ShieldCheck, FileCode, Film, FileImage, AlertCircle } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
@@ -11,13 +11,14 @@ import ManageKeysModal from './components/ManageKeysModal';
 import SuccessModal from './components/SuccessModal';
 import TutorialModal from './components/TutorialModal';
 import { DEFAULT_SETTINGS } from './constants';
-import { AppSettings, ExtractedMetadata, FileType, AppView } from './types';
+// Added APIKeyRecord to imports to support explicit type casting
+import { AppSettings, ExtractedMetadata, FileType, AppView, APIKeyRecord } from './types';
 import { processImageWithGemini } from './services/geminiService';
 import { processImageWithGroq } from './services/groqService';
 import { useAuth } from './contexts/AuthContext';
 import { rtdb, ref, onValue, set, remove, push, update } from './services/firebase';
 
-const VECTOR_PLACEHOLDER_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAACXBIWXMAAAsTAAALEwEAmpwYAAAByUlEQVR4nO3SQRHAIBDAsMUE/p1SInz0kgmS2dtz7z13AOzM9wXAmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vvyA6LPAwS4VAnIAAAAAElFTkSuQmCC";
+const VECTOR_PLACEHOLDER_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAACXBIWXMAAAsTAAALEwEAmpwYAAAByUlEQVR4nO3SQRHAIBDAsMUE/p1SInz0kgmS2dtz7z13AOzM9wXAmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vvyA6LPAwS4VAnIAAAAAElFTkSuQmCC";
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>('Home');
@@ -28,6 +29,7 @@ const App: React.FC = () => {
   const [isKeysModalOpen, setKeysModalOpen] = useState(false);
   const [isSuccessModalOpen, setSuccessModalOpen] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const [globalError, setGlobalError] = useState<string | null>(null);
   const { user, profile, deductCredit, setAuthModalOpen } = useAuth();
 
   useEffect(() => {
@@ -97,24 +99,24 @@ const App: React.FC = () => {
     const extension = file.name.split('.').pop()?.toLowerCase();
     let thumbnail = VECTOR_PLACEHOLDER_B64;
 
-    if (file.type.startsWith('image/') && extension !== 'svg') {
-      thumbnail = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target?.result as string);
-        reader.readAsDataURL(file);
-      });
-    } else if (file.type.startsWith('video/')) {
-      thumbnail = await extractFrameFromVideo(file);
-    } else if (extension === 'svg') {
-      // SVG can be read as a data URL easily
-      thumbnail = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target?.result as string);
-        reader.readAsDataURL(file);
-      });
-    } else {
-      // For AI, EPS, etc. - Use the vector placeholder base64
-      thumbnail = VECTOR_PLACEHOLDER_B64;
+    try {
+      if (file.type.startsWith('image/') && extension !== 'svg') {
+        thumbnail = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.readAsDataURL(file);
+        });
+      } else if (file.type.startsWith('video/')) {
+        thumbnail = await extractFrameFromVideo(file);
+      } else if (extension === 'svg') {
+        thumbnail = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.readAsDataURL(file);
+        });
+      }
+    } catch (e) {
+      console.error("Preview error for:", file.name, e);
     }
 
     return {
@@ -131,7 +133,7 @@ const App: React.FC = () => {
     if (files.length === 0) return;
     
     if (profile && profile.credits < files.length) {
-      alert(`Insufficient Credits. Required: ${files.length}, Available: ${profile.credits}`);
+      setGlobalError(`Insufficient Credits. You have ${profile.credits} units remaining.`);
       return;
     }
 
@@ -148,6 +150,7 @@ const App: React.FC = () => {
   };
 
   const startBatchProcess = async () => {
+    if (!user) { setAuthModalOpen(true); return; }
     const pending = items.filter(i => i.status === 'pending' || i.status === 'error');
     if (pending.length === 0) return;
     processBatch(pending);
@@ -156,29 +159,39 @@ const App: React.FC = () => {
   const processBatch = async (batch: ExtractedMetadata[]) => {
     if (!user) return;
     setIsProcessing(true);
+    setGlobalError(null);
+
     for (const item of batch) {
       const itemRef = ref(rtdb, `metadata/${user.uid}/${item.id}`);
       const currentProfile = profile; 
+      
       if (!currentProfile || currentProfile.credits <= 0) {
         await update(itemRef, { status: 'error' });
-        continue;
+        setGlobalError("Batch stopped: Out of credits.");
+        break;
       }
 
       await update(itemRef, { status: 'processing' });
       
       try {
-        const geminiKey = Object.values(profile?.apiKeys || {}).find(k => k.provider === 'Gemini')?.key;
-        const groqKey = Object.values(profile?.apiKeys || {}).find(k => k.provider === 'Groq')?.key;
+        // Fix: Cast Object.values to APIKeyRecord[] to avoid 'unknown' type errors for provider and key properties
+        const geminiKey = (Object.values(profile?.apiKeys || {}) as APIKeyRecord[]).find(k => k.provider === 'Gemini')?.key;
+        const groqKey = (Object.values(profile?.apiKeys || {}) as APIKeyRecord[]).find(k => k.provider === 'Groq')?.key;
 
         let result;
         let detectedEngine: 'Gemini' | 'Groq' = 'Gemini';
 
-        if (geminiKey || !groqKey) {
-          result = await processImageWithGemini(item.thumbnail, settings, profile?.apiKeys);
+        // Auto-engine selection based on available user keys
+        if (geminiKey) {
+          result = await processImageWithGemini(item.thumbnail, settings, item.fileName, profile?.apiKeys);
           detectedEngine = 'Gemini';
-        } else {
+        } else if (groqKey) {
           result = await processImageWithGroq(item.thumbnail, settings, groqKey);
           detectedEngine = 'Groq';
+        } else {
+          // Fallback to system Gemini key
+          result = await processImageWithGemini(item.thumbnail, settings, item.fileName, profile?.apiKeys);
+          detectedEngine = 'Gemini';
         }
 
         const success = await deductCredit(1);
@@ -188,12 +201,19 @@ const App: React.FC = () => {
           await update(itemRef, { status: 'error' });
         }
       } catch (error: any) {
-        console.error("Processing Critical Error:", error);
+        console.error("Processing Error for", item.fileName, ":", error);
         await update(itemRef, { status: 'error' });
+        // Don't stop the whole batch for one error unless it's a key issue
+        if (error.message?.includes("API Key")) {
+          setGlobalError(`Critical Error: ${error.message}`);
+          break;
+        }
       }
     }
     setIsProcessing(false);
-    setSuccessModalOpen(true);
+    if (items.some(i => i.status === 'completed')) {
+      setSuccessModalOpen(true);
+    }
   };
 
   const handleDrop = async (e: React.DragEvent) => {
@@ -236,10 +256,21 @@ const App: React.FC = () => {
   const completedCount = items.filter(i => i.status === 'completed').length;
   const pendingCount = items.length - completedCount;
 
-  const renderContent = () => {
-    if (view === 'Home') {
-      return (
+  return (
+    <div className="min-h-screen bg-bgMain text-textMain transition-all duration-300 selection:bg-green-500/30 flex flex-col">
+      <Navbar onSwitchView={(v) => v === 'Tutorials' ? setIsTutorialOpen(true) : setView(v)} onManageKeys={() => setKeysModalOpen(true)} />
+      <Sidebar settings={settings} setSettings={setSettings} onManageKeys={() => setKeysModalOpen(true)} />
+      
+      <main className="pl-[280px] pt-16 flex-grow transition-all">
         <div className="max-w-6xl mx-auto px-10 py-16">
+          {globalError && (
+            <div className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-4 text-xs font-black text-red-500 uppercase tracking-widest animate-in fade-in slide-in-from-top-4">
+              <AlertCircle size={20} />
+              {globalError}
+              <button onClick={() => setGlobalError(null)} className="ml-auto hover:opacity-70"><X size={16} /></button>
+            </div>
+          )}
+
           <PlatformPills selected={settings.platform} onSelect={(p) => setSettings(s => ({ ...s, platform: p }))} />
           
           <div 
@@ -280,7 +311,8 @@ const App: React.FC = () => {
                     disabled={isProcessing || pendingCount === 0}
                     className="bg-green-500 text-white px-10 py-4 rounded-full font-black uppercase tracking-widest flex items-center gap-3 shadow-xl shadow-green-500/30 hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
                   >
-                    <Play size={20} fill="currentColor" /> Process Files ({items.length})
+                    {isProcessing ? <Loader2 className="animate-spin" size={20} /> : <Play size={20} fill="currentColor" />}
+                    {isProcessing ? 'Processing Cluster...' : `Process Files (${items.length})`}
                   </button>
                 </div>
 
@@ -293,19 +325,19 @@ const App: React.FC = () => {
                   
                   <div className="flex items-center gap-4">
                     <button className="flex items-center gap-2 px-6 py-3 rounded-xl border border-slate-200 dark:border-white/10 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-all">
-                      <LayoutGrid size={16} /> Select Items
+                      <LayoutGrid size={16} /> Select
                     </button>
                     <button 
                       onClick={() => user && remove(ref(rtdb, `metadata/${user.uid}`))}
                       className="flex items-center gap-2 px-6 py-3 rounded-xl border border-red-100 text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 transition-all"
                     >
-                      <X size={16} /> Clear All
+                      <X size={16} /> Clear
                     </button>
                     <button 
                       onClick={downloadAllCSV}
                       className="flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-800 text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-black/20 transition-all"
                     >
-                      <Download size={16} /> Export CSV
+                      <Download size={16} /> Export
                     </button>
                   </div>
                 </div>
@@ -332,29 +364,8 @@ const App: React.FC = () => {
             </div>
           )}
         </div>
-      );
-    }
-    return (
-      <div className="max-w-4xl mx-auto px-10 py-32 space-y-12 animate-in fade-in slide-in-from-bottom-4">
-        <button onClick={() => setView('Home')} className="flex items-center gap-2 text-green-500 font-black uppercase text-[10px] tracking-widest hover:gap-3 transition-all"><ArrowLeft size={16} /> Return Home</button>
-        <div className="space-y-4">
-          <h1 className="text-6xl font-black italic tracking-tight uppercase leading-none">{view}</h1>
-          <div className="h-2 w-24 bg-green-500 rounded-full" />
-        </div>
-        <div className="prose dark:prose-invert max-w-none text-textDim font-medium leading-relaxed text-lg italic">
-          {view === 'About' && "CSV TREE Pro transforms visual assets into searchable, indexed metadata using high-frequency AI clusters. Our mission is to accelerate creator workflows through intelligence."}
-          {view === 'Pricing' && "Free operators receive 100 energy units daily. Premium members gain priority access to our compute clusters with 6,000 units per month and early access to new AI models."}
-          {(view === 'Privacy' || view === 'Terms') && "Your data remains your property. We operate as a zero-retention bridge between your media and AI engines. All session logs can be purged at any time by the user."}
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <div className="min-h-screen bg-bgMain text-textMain transition-all duration-300 selection:bg-green-500/30 flex flex-col">
-      <Navbar onSwitchView={(v) => v === 'Tutorials' ? setIsTutorialOpen(true) : setView(v)} onManageKeys={() => setKeysModalOpen(true)} />
-      <Sidebar settings={settings} setSettings={setSettings} onManageKeys={() => setKeysModalOpen(true)} />
-      <main className="pl-[280px] pt-16 flex-grow transition-all">{renderContent()}</main>
+      </main>
+      
       <Footer onNavigate={setView} />
       <ManageKeysModal isOpen={isKeysModalOpen} onClose={() => setKeysModalOpen(false)} />
       <SuccessModal 
@@ -367,5 +378,9 @@ const App: React.FC = () => {
     </div>
   );
 };
+
+const Loader2 = ({ className, size }: { className?: string, size?: number }) => (
+  <svg className={`animate-spin ${className}`} width={size || 16} height={size || 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+);
 
 export default App;

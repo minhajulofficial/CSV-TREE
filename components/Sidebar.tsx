@@ -5,7 +5,6 @@ import {
   ChevronRight, 
   Info,
   Settings as SettingsIcon,
-  Sliders,
   Sparkles,
   Cpu,
   MonitorCheck
@@ -193,7 +192,7 @@ const ModeButton: React.FC<{ label: string, icon: React.ReactNode, active: boole
 );
 
 const SidebarSlider: React.FC<{ label: string, value: number, limit: number, onChange: (v: number) => void }> = ({ label, value, limit, onChange }) => (
-  <div className="space-y-3">
+  <div className="space-y-2">
     <div className="flex items-center justify-between px-1">
       <div className="flex items-center gap-1.5 group cursor-help">
         <span className="text-[11px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-tight">{label}</span>
@@ -202,22 +201,20 @@ const SidebarSlider: React.FC<{ label: string, value: number, limit: number, onC
       <span className="text-[12px] font-black text-slate-800 dark:text-white tabular-nums">{value}</span>
     </div>
     <div className="relative flex items-center h-4">
-      <div className="absolute w-full h-1 bg-slate-100 dark:bg-white/10 rounded-full" />
-      <div className="absolute h-1 bg-primary rounded-full" style={{ width: `${(value / limit) * 100}%` }} />
       <input 
         type="range" 
         min="0" 
         max={limit} 
         value={value} 
         onChange={(e) => onChange(parseInt(e.target.value))} 
-        className="absolute w-full h-1 cursor-pointer appearance-none bg-transparent accent-primary hover:accent-primary/80 transition-all z-10" 
+        className="w-full h-1 cursor-pointer appearance-none bg-slate-100 dark:bg-white/10 rounded-full accent-primary hover:accent-primary/80 transition-all z-10" 
       />
     </div>
   </div>
 );
 
 const SidebarToggle: React.FC<{ label: string, checked: boolean, onChange: (v: boolean) => void }> = ({ label, checked, onChange }) => (
-  <div className="flex items-center justify-between px-1">
+  <div className="flex items-center justify-between px-1 py-1">
     <div className="flex items-center gap-2 group cursor-help">
       <span className="text-[11px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-tight">{label}</span>
       <Info size={12} className="text-slate-400 opacity-50 group-hover:opacity-100 transition-opacity" />

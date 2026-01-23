@@ -52,7 +52,8 @@ const ManageKeysModal: React.FC<ManageKeysModalProps> = ({ isOpen, onClose }) =>
     }
   };
 
-  const filteredKeys = Object.values(profile?.apiKeys || {}).filter(k => k.provider === activeTab);
+  // Fix: Explicitly cast Object.values result to APIKeyRecord[] to prevent 'unknown' property access errors
+  const filteredKeys = (Object.values(profile?.apiKeys || {}) as APIKeyRecord[]).filter(k => k.provider === activeTab);
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">

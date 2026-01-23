@@ -2,13 +2,34 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AppSettings, APIKeyRecord } from "../types";
 
-export const processImageWithGemini = async (imageBase64: string, settings: AppSettings, customKeys?: Record<string, APIKeyRecord>) => {
+/**
+ * Robustly parses JSON from AI response, handling potential markdown wrappers or prefixes.
+ */
+const parseAIResponse = (text: string) => {
+  try {
+    // Attempt direct parse first
+    return JSON.parse(text);
+  } catch (e) {
+    // Look for JSON block in markdown (```json ... ```)
+    const match = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/{[\s\S]*}/);
+    if (match) {
+      try {
+        return JSON.parse(match[1] || match[0]);
+      } catch (innerError) {
+        throw new Error("AI returned invalid JSON structure.");
+      }
+    }
+    throw new Error("Could not find valid JSON in AI response.");
+  }
+};
+
+export const processImageWithGemini = async (imageBase64: string, settings: AppSettings, fileName: string, customKeys?: Record<string, APIKeyRecord>) => {
   try {
     const mimeType = imageBase64.match(/data:([^;]+);base64/)?.[1] || "image/jpeg";
     const base64Data = imageBase64.split(',')[1];
 
-    // Priority 1: Use User's custom Gemini Key
-    // Priority 2: Use process.env.API_KEY
+    // Priority 1: User's custom Gemini Key
+    // Priority 2: System environment variable
     let targetKey = process.env.API_KEY;
     
     if (customKeys) {
@@ -17,7 +38,7 @@ export const processImageWithGemini = async (imageBase64: string, settings: AppS
     }
 
     if (!targetKey) {
-      throw new Error("No Gemini API Key available. Please add one in settings or contact admin.");
+      throw new Error("Missing Gemini API Key. Please configure it in settings.");
     }
 
     const ai = new GoogleGenAI({ apiKey: targetKey });
@@ -27,15 +48,18 @@ export const processImageWithGemini = async (imageBase64: string, settings: AppS
 
     if (settings.mode === 'Metadata') {
       systemPrompt = `
-        Analyze this image for professional microstock metadata (Target: ${settings.platform}).
-        Output MUST be in strict JSON format.
+        Act as a professional microstock metadata expert. 
+        Analyze the provided visual data and the filename: "${fileName}".
         
-        Requirements:
-        - Title: SEO optimized, natural language, ${settings.minTitle} to ${settings.maxTitle} words.
-        - Keywords: Exact array of tags, ${settings.minKeywords} to ${settings.maxKeywords} items.
-        - Categories: Exactly 2 appropriate stock categories.
-        - Description: Summary of subject matter, ${settings.minDesc} to ${settings.maxDesc} words.
-        ${settings.singleWordKeywords ? '- CONSTRAINT: Every keyword must be a single word (no spaces).' : ''}
+        Generate metadata optimized for ${settings.platform} SEO.
+        
+        Rules:
+        1. Title: Natural language, engaging, ${settings.minTitle} to ${settings.maxTitle} words.
+        2. Keywords: Exactly ${settings.maxKeywords} tags. ${settings.singleWordKeywords ? 'Each tag MUST be a single word (no spaces).' : ''}
+        3. Categories: Provide exactly 2 appropriate microstock categories (e.g., 'Abstract', 'Nature', 'Business').
+        4. Description: Accurate summary, ${settings.minDesc} to ${settings.maxDesc} words.
+        
+        OUTPUT FORMAT: You MUST return ONLY a JSON object. No extra text.
       `;
       responseSchema = {
         type: Type.OBJECT,
@@ -48,7 +72,7 @@ export const processImageWithGemini = async (imageBase64: string, settings: AppS
         required: ["title", "keywords", "description", "categories"]
       };
     } else {
-      systemPrompt = "Act as a Prompt Engineering Specialist. Reverse-engineer this image to provide the most effective AI generation prompt. Output format: { \"prompt\": \"...\" }";
+      systemPrompt = `Analyze this asset (Filename: ${fileName}) and reverse-engineer it into a highly detailed generative AI prompt for DALL-E 3 or Midjourney. Return ONLY a JSON object: { "prompt": "..." }`;
       responseSchema = {
         type: Type.OBJECT,
         properties: {
@@ -73,10 +97,12 @@ export const processImageWithGemini = async (imageBase64: string, settings: AppS
       }
     });
 
-    const text = response.text || "{}";
-    return JSON.parse(text);
+    const text = response.text;
+    if (!text) throw new Error("AI returned empty response.");
+    
+    return parseAIResponse(text);
   } catch (error: any) {
-    console.error("Gemini Error:", error);
-    throw new Error(error.message || "Gemini engine failure.");
+    console.error("Gemini Service Error:", error);
+    throw error;
   }
 };
