@@ -7,9 +7,7 @@ import {
   Diamond, 
   Hexagon, 
   Circle,
-  Image as ImageIcon,
-  PenTool,
-  Video
+  PenTool
 } from 'lucide-react';
 import { Platform, AppSettings } from './types';
 
@@ -26,7 +24,6 @@ export const PLATFORMS: { id: Platform, label: string, icon: React.ReactNode, co
 
 export const DEFAULT_SETTINGS: AppSettings = {
   mode: 'Metadata',
-  engine: 'Gemini',
   minTitle: 8,
   maxTitle: 22,
   minKeywords: 43,

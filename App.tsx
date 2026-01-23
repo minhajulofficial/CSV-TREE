@@ -13,7 +13,6 @@ import { AppSettings, ExtractedMetadata, FileType, AppView } from './types';
 import { processImageWithGemini } from './services/geminiService';
 import { processImageWithGroq } from './services/groqService';
 import { useAuth } from './contexts/AuthContext';
-// Fix: Added 'update' to imports from './services/firebase'
 import { rtdb, ref, onValue, set, remove, push, update } from './services/firebase';
 
 const App: React.FC = () => {
@@ -28,7 +27,12 @@ const App: React.FC = () => {
   useEffect(() => {
     const saved = localStorage.getItem('csv-tree-settings');
     if (saved) {
-      try { setSettings(prev => ({ ...prev, ...JSON.parse(saved) })); } catch (e) {}
+      try { 
+        const parsed = JSON.parse(saved);
+        // Clean up any legacy engine settings
+        delete parsed.engine;
+        setSettings(prev => ({ ...prev, ...parsed })); 
+      } catch (e) {}
     }
   }, []);
 
@@ -36,7 +40,6 @@ const App: React.FC = () => {
     localStorage.setItem('csv-tree-settings', JSON.stringify(settings));
   }, [settings]);
 
-  // Sync Metadata for Current User
   useEffect(() => {
     if (!user) {
       setItems([]);
@@ -69,8 +72,7 @@ const App: React.FC = () => {
           id: '',
           thumbnail: base64,
           status: 'pending',
-          fileName: file.name,
-          engine: settings.engine
+          fileName: file.name
         });
       };
       reader.readAsDataURL(file);
@@ -108,7 +110,6 @@ const App: React.FC = () => {
     for (const item of batch) {
       const itemRef = ref(rtdb, `metadata/${user.uid}/${item.id}`);
       
-      // Safety Check
       const currentProfile = profile; 
       if (!currentProfile || currentProfile.credits <= 0) {
         await update(itemRef, { status: 'error' });
@@ -118,17 +119,30 @@ const App: React.FC = () => {
       await update(itemRef, { status: 'processing' });
       
       try {
+        // Intelligence: Automate Engine Detection
+        const geminiKey = Object.values(profile?.apiKeys || {}).find(k => k.provider === 'Gemini')?.key;
+        const groqKey = Object.values(profile?.apiKeys || {}).find(k => k.provider === 'Groq')?.key;
+
         let result;
-        if (settings.engine === 'Groq') {
-          // Pass custom keys if available
-          result = await processImageWithGroq(item.thumbnail, settings);
+        let detectedEngine: 'Gemini' | 'Groq' = 'Gemini';
+
+        // Preference: If user has their own Gemini key, use it.
+        // If not, but they have a Groq key, use Groq.
+        // Else fallback to Gemini (with system key if available).
+        if (geminiKey) {
+          result = await processImageWithGemini(item.thumbnail, settings, profile?.apiKeys);
+          detectedEngine = 'Gemini';
+        } else if (groqKey) {
+          result = await processImageWithGroq(item.thumbnail, settings, groqKey);
+          detectedEngine = 'Groq';
         } else {
           result = await processImageWithGemini(item.thumbnail, settings, profile?.apiKeys);
+          detectedEngine = 'Gemini';
         }
 
         const success = await deductCredit(1);
         if (success) {
-          await update(itemRef, { ...result, status: 'completed' });
+          await update(itemRef, { ...result, status: 'completed', engine: detectedEngine });
         } else {
           await update(itemRef, { status: 'error' });
         }
@@ -197,8 +211,8 @@ const App: React.FC = () => {
             <div className="text-center space-y-10 relative z-10">
               <div className="space-y-4">
                 <div className="flex items-center justify-center gap-2 mb-2">
-                   <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all ${settings.engine === 'Groq' ? 'bg-accent/10 text-accent border border-accent/20' : 'bg-primary/10 text-primary border border-primary/20'}`}>
-                      <Sparkles size={12} className="animate-pulse" /> AI {settings.engine} Active
+                   <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all bg-primary/10 text-primary border border-primary/20`}>
+                      <Sparkles size={12} className="animate-pulse" /> Global AI Pulse Active
                    </div>
                 </div>
                 <h1 className="text-7xl font-black tracking-tighter text-textMain drop-shadow-2xl uppercase italic leading-none">

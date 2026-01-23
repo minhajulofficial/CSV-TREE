@@ -24,7 +24,6 @@ export interface UserProfile {
 
 export interface AppSettings {
   mode: 'Metadata' | 'ImageToPrompt';
-  engine: AIEngine;
   minTitle: number;
   maxTitle: number;
   minKeywords: number;

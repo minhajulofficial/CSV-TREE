@@ -7,15 +7,11 @@ import {
   Sliders,
   Sparkles,
   Zap,
-  Layout,
-  Cpu,
-  Target,
   Key,
   Activity,
   Plus
 } from 'lucide-react';
 import { AppSettings } from '../types';
-import { useAuth } from '../contexts/AuthContext';
 
 interface SidebarProps {
   settings: AppSettings;
@@ -24,9 +20,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ settings, setSettings, onManageKeys }) => {
-  const { profile } = useAuth();
   const [expanded, setExpanded] = useState({
-    engine: true,
     mode: true,
     customization: true,
     settings: true,
@@ -47,38 +41,6 @@ const Sidebar: React.FC<SidebarProps> = ({ settings, setSettings, onManageKeys }
   return (
     <aside className="w-[280px] fixed left-0 top-16 bottom-0 bg-bgSidebar border-r border-borderMain overflow-y-auto px-6 py-10 z-40 select-none no-scrollbar transition-all duration-300 shadow-2xl">
       
-      {/* Engine Selection */}
-      <div className="mb-10 group">
-        <header 
-          onClick={() => toggleSection('engine')}
-          className="flex items-center justify-between w-full text-[10px] font-black text-textDim uppercase tracking-[0.3em] mb-5 cursor-pointer hover:text-primary transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <div className={`p-1 rounded-md transition-colors ${expanded.engine ? 'bg-primary/10 text-primary' : ''}`}>
-              {expanded.engine ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </div>
-            AI Engine
-          </div>
-          <Cpu size={14} className="opacity-40 group-hover:rotate-12 transition-transform" />
-        </header>
-        {expanded.engine && (
-          <div className="flex bg-bgMain border border-borderMain p-1.5 rounded-2xl gap-1 shadow-inner relative">
-            <button 
-              onClick={() => updateSetting('engine', 'Gemini')}
-              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-[0.2em] rounded-[0.85rem] transition-all ${settings.engine === 'Gemini' ? 'bg-primary text-white shadow-lg scale-[1.02]' : 'text-textDim hover:text-textMain'}`}
-            >
-              Gemini
-            </button>
-            <button 
-              onClick={() => updateSetting('engine', 'Groq')}
-              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-[0.2em] rounded-[0.85rem] transition-all relative ${settings.engine === 'Groq' ? 'bg-accent text-white shadow-lg scale-[1.02]' : 'text-textDim hover:text-textMain'}`}
-            >
-              Groq
-            </button>
-          </div>
-        )}
-      </div>
-
       {/* Mode Selection */}
       <div className="mb-12">
         <header 
@@ -246,18 +208,6 @@ const SidebarSlider: React.FC<{ label: string, min: number, max: number, limit: 
       <input type="range" min="0" max={limit} value={min} onChange={(e) => onMinChange(parseInt(e.target.value))} className="w-full h-1.5 cursor-pointer appearance-none bg-transparent -mt-5.5 relative z-10" />
       <input type="range" min="0" max={limit} value={max} onChange={(e) => onMaxChange(parseInt(e.target.value))} className="w-full h-1.5 cursor-pointer appearance-none bg-transparent -mt-5.5 relative z-10" />
     </div>
-  </div>
-);
-
-const SidebarToggle: React.FC<{ label: string, active: boolean, onToggle: () => void }> = ({ label, active, onToggle }) => (
-  <div className="flex items-center justify-between group">
-    <span className="text-[9px] font-black text-textDim tracking-[0.1em] group-hover:text-textMain transition-colors uppercase">{label}</span>
-    <button 
-      onClick={onToggle}
-      className={`relative w-11 h-6 rounded-full transition-all duration-300 focus:outline-none border-2 active:scale-95 ${active ? 'bg-primary border-primary shadow-[0_0_10px_rgba(0,212,255,0.3)]' : 'bg-bgMain border-borderMain'}`}
-    >
-      <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-all duration-300 shadow-md ${active ? 'translate-x-5' : 'translate-x-0 opacity-40'}`} />
-    </button>
   </div>
 );
 
