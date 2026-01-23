@@ -2,7 +2,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   LogOut, User as UserIcon, Loader2, 
-  Sun, Moon, Crown, RefreshCw, Sparkles, AlertCircle, Shield
+  Sun, Moon, Crown, RefreshCw, Sparkles, AlertCircle, Shield,
+  Book, Settings
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -13,9 +14,10 @@ const ADMIN_EMAILS = ["minhajulofficial.bd@gmail.com"];
 
 interface NavbarProps {
   onSwitchView: (view: AppView) => void;
+  onManageKeys: () => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onSwitchView }) => {
+const Navbar: React.FC<NavbarProps> = ({ onSwitchView, onManageKeys }) => {
   const { user, profile, logout, loading, profileLoading, setAuthModalOpen, resetUserCredits, error } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -41,12 +43,32 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchView }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-3">
+          {/* Tutorials / Guide Icon */}
+          <button 
+            onClick={() => onSwitchView('Tutorials')}
+            title="Tutorials & Guide"
+            className="p-2.5 rounded-xl text-textDim hover:text-primary hover:bg-primary/5 transition-all"
+          >
+            <Book size={20} />
+          </button>
+
+          {/* Settings / API Keys Icon */}
+          <button 
+            onClick={onManageKeys}
+            title="Manage API Keys"
+            className="p-2.5 rounded-xl text-textDim hover:text-primary hover:bg-primary/5 transition-all"
+          >
+            <Settings size={20} />
+          </button>
+
+          <div className="h-6 w-px bg-borderMain mx-1" />
+
           <button onClick={toggleTheme} className="p-2.5 rounded-xl bg-bgSidebar border border-borderMain text-textDim hover:text-primary transition-all shadow-sm">
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           
-          <div className="h-6 w-px bg-borderMain" />
+          <div className="h-6 w-px bg-borderMain mx-1" />
           
           {loading ? (
             <Loader2 size={20} className="animate-spin text-primary" />

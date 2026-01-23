@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { 
-  db, 
-  collection, 
-  onSnapshot, 
-  doc, 
-  updateDoc, 
-  query, 
-  orderBy,
-  deleteDoc
+  rtdb,
+  ref,
+  onValue,
+  update,
+  remove,
+  increment
 } from "../services/firebase";
 import { 
   Users, Shield, CreditCard, Search, ArrowLeft, 
@@ -25,20 +23,33 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'users'), orderBy('tier', 'desc'));
-    const unsubscribe = onSnapshot(q, (snap) => {
-      setAllUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    const usersRef = ref(rtdb, 'users');
+    const unsubscribe = onValue(usersRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        // Fix: Use 'any' to cast the mapped object and allow property access on 'tier' during sorting
+        const userList = Object.entries(data).map(([id, val]) => ({
+          id,
+          ...(val as any)
+        }));
+        // Basic sort by tier (Premium first)
+        userList.sort((a, b) => (b.tier === 'Premium' ? -1 : 1));
+        setAllUsers(userList);
+      } else {
+        setAllUsers([]);
+      }
       setLoading(false);
     }, (err) => {
-      console.error("Admin view sync error:", err);
+      console.error("Admin RTDB sync error:", err);
       setLoading(false);
     });
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
 
   const adjustCredits = async (id: string, current: number, amount: number) => {
     try {
-      await updateDoc(doc(db, 'users', id), { 
+      const userRef = ref(rtdb, `users/${id}`);
+      await update(userRef, { 
         credits: (current || 0) + amount,
         maxCredits: Math.max((current || 0) + amount, 100)
       });
@@ -48,7 +59,8 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   const toggleTier = async (id: string, current: string) => {
     try {
       const newTier = current === 'Premium' ? 'Free' : 'Premium';
-      await updateDoc(doc(db, 'users', id), { 
+      const userRef = ref(rtdb, `users/${id}`);
+      await update(userRef, { 
         tier: newTier,
         credits: newTier === 'Premium' ? 6000 : 100,
         maxCredits: newTier === 'Premium' ? 6000 : 100
@@ -57,9 +69,11 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   };
 
   const deleteUserRecord = async (id: string) => {
-    if (confirm("Permanently delete this operator record? This cannot be undone.")) {
+    if (confirm("Permanently delete this operator record from Realtime Database? This cannot be undone.")) {
       try {
-        await deleteDoc(doc(db, 'users', id));
+        await remove(ref(rtdb, `users/${id}`));
+        // Also remove their metadata if it exists at metadata/{uid}
+        await remove(ref(rtdb, `metadata/${id}`));
       } catch (err) { alert("Deletion failed."); }
     }
   };
@@ -78,8 +92,8 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         </div>
       </div>
       <div className="text-center space-y-2">
-        <p className="text-[12px] font-black uppercase tracking-[0.5em] text-primary">Secure Uplink Established</p>
-        <p className="text-[10px] text-textDim font-bold uppercase tracking-widest">Decrypting Infrastructure Database...</p>
+        <p className="text-[12px] font-black uppercase tracking-[0.5em] text-primary">Secure RTDB Uplink Established</p>
+        <p className="text-[10px] text-textDim font-bold uppercase tracking-widest">Decrypting Infrastructure Clusters...</p>
       </div>
     </div>
   );
@@ -95,7 +109,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
             <div className="space-y-1">
               <h1 className="text-5xl font-black italic tracking-tighter uppercase text-textMain leading-none">Command Center</h1>
               <div className="flex items-center gap-3">
-                <p className="text-textDim text-[10px] font-black uppercase tracking-[0.4em] opacity-60">Global Node Control</p>
+                <p className="text-textDim text-[10px] font-black uppercase tracking-[0.4em] opacity-60">RTDB Global Node Control</p>
                 <div className="h-px w-12 bg-borderMain" />
                 <span className="flex items-center gap-1.5 text-green-500 text-[9px] font-black uppercase tracking-widest animate-pulse">
                   <ShieldCheck size={12} /> Live Sync Active

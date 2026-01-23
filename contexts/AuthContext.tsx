@@ -1,21 +1,23 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   auth, 
-  db,
+  rtdb,
   googleProvider,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
-  updateProfile as fbUpdateProfile,
   signInWithPopup,
   signOut,
   onAuthStateChanged,
+  ref,
+  set,
+  get,
+  update,
+  onValue,
   increment,
-  doc,
-  setDoc,
-  getDoc,
-  updateDoc,
-  onSnapshot,
+  // Fix: Import missing auth functions
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  updateProfile,
   type User 
 } from '../services/firebase';
 import { UserProfile } from '../types';
@@ -26,8 +28,9 @@ interface AuthContextType {
   loading: boolean;
   profileLoading: boolean;
   loginWithGoogle: () => Promise<void>;
-  loginWithEmail: (email: string, pass: string) => Promise<void>;
-  registerWithEmail: (email: string, pass: string, name: string) => Promise<void>;
+  // Fix: Added missing methods to the context type
+  loginWithEmail: (email: string, password: string) => Promise<void>;
+  registerWithEmail: (email: string, password: string, name: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   deductCredit: (amount?: number) => Promise<boolean>;
@@ -48,7 +51,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
 
-  // Sync Auth State and Firestore Profile
   useEffect(() => {
     let unsubscribeProfile: (() => void) | null = null;
 
@@ -57,36 +59,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (currentUser) {
         setProfileLoading(true);
-        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userRef = ref(rtdb, `users/${currentUser.uid}`);
         
-        // Ensure user exists in Firestore
-        const snapshot = await getDoc(userDocRef);
-        if (!snapshot.exists()) {
-          const initialData: UserProfile = {
-            credits: 100,
-            maxCredits: 100,
-            tier: 'Free',
-            email: currentUser.email || '',
-            displayName: currentUser.displayName || 'Unknown Operator',
-            lastResetDate: new Date().toISOString()
-          };
-          await setDoc(userDocRef, initialData);
-        } else {
-          // Update basic info if needed
-          await updateDoc(userDocRef, {
-            email: currentUser.email || snapshot.data().email,
-            displayName: currentUser.displayName || snapshot.data().displayName
-          });
-        }
-
-        if (unsubscribeProfile) unsubscribeProfile();
-        
-        unsubscribeProfile = onSnapshot(userDocRef, (snap) => {
-          if (snap.exists()) {
-            setProfile(snap.data() as UserProfile);
+        try {
+          const snapshot = await get(userRef);
+          if (!snapshot.exists()) {
+            // First time login - Create full profile with 100 credits
+            const initialData: UserProfile = {
+              credits: 100,
+              maxCredits: 100,
+              tier: 'Free',
+              email: currentUser.email || '',
+              displayName: currentUser.displayName || 'Contributor',
+              lastResetDate: new Date().toISOString()
+            };
+            await set(userRef, initialData);
+          } else {
+            // Update existing profile metadata
+            await update(userRef, {
+              email: currentUser.email || snapshot.val().email || '',
+              displayName: currentUser.displayName || snapshot.val().displayName || 'Contributor'
+            });
           }
+
+          if (unsubscribeProfile) unsubscribeProfile();
+          
+          unsubscribeProfile = onValue(userRef, (snap) => {
+            if (snap.exists()) {
+              setProfile(snap.val() as UserProfile);
+            }
+            setProfileLoading(false);
+          }, (err) => {
+            console.error("Profile Listener Error:", err);
+            setError("Session interrupted. Please refresh.");
+            setProfileLoading(false);
+          });
+        } catch (err: any) {
+          console.error("Database Initial Sync Error:", err);
+          setError("Failed to connect to the cloud database.");
           setProfileLoading(false);
-        });
+        }
       } else {
         setProfile(null);
         setProfileLoading(false);
@@ -101,70 +113,94 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  const loginWithGoogle = async () => {
+    setError(null);
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (err: any) {
+      console.error("Auth Failure:", err);
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setError(err.message || "Failed to sign in with Google.");
+      }
+      throw err;
+    }
+  };
+
+  // Fix: Implement missing auth methods
+  const loginWithEmail = async (email: string, password: string) => {
+    setError(null);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (err: any) {
+      setError(err.message || "Login failed");
+      throw err;
+    }
+  };
+
+  const registerWithEmail = async (email: string, password: string, name: string) => {
+    setError(null);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(userCredential.user, { displayName: name });
+    } catch (err: any) {
+      setError(err.message || "Registration failed");
+      throw err;
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    setError(null);
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (err: any) {
+      setError(err.message || "Password reset failed");
+      throw err;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await signOut(auth);
+    } catch (err: any) {
+      console.error("Logout error", err);
+    }
+  };
+
   const deductCredit = async (amount: number = 1): Promise<boolean> => {
     if (!user || !profile) return false;
+    // Check if user has enough credits
     if (profile.credits < amount) return false;
+    
     try {
-      const userDocRef = doc(db, 'users', user.uid);
-      await updateDoc(userDocRef, { credits: increment(-amount) });
+      const userRef = ref(rtdb, `users/${user.uid}`);
+      await update(userRef, { credits: increment(-amount) });
       return true;
-    } catch (err) { return false; }
+    } catch (err) {
+      console.error("Credit Deduction Error:", err);
+      return false;
+    }
   };
 
   const resetUserCredits = async () => {
     if (!user || !profile) return;
     try {
       const amount = profile.tier === 'Premium' ? 6000 : 100;
-      await updateDoc(doc(db, 'users', user.uid), { 
+      await update(ref(rtdb, `users/${user.uid}`), { 
         credits: amount,
         maxCredits: amount,
         lastResetDate: new Date().toISOString() 
       });
-    } catch (err) { setError("Manual sync failed."); }
-  };
-
-  const loginWithGoogle = async () => {
-    setError(null);
-    try { 
-      await signInWithPopup(auth, googleProvider); 
-    } 
-    catch (err: any) { 
-      if (err.code !== 'auth/popup-closed-by-user') {
-        setError(err.message);
-        throw err;
-      }
+    } catch (err) { 
+      setError("Manual credit sync failed."); 
     }
-  };
-
-  const loginWithEmail = async (email: string, pass: string) => {
-    setError(null);
-    try { await signInWithEmailAndPassword(auth, email, pass); } 
-    catch (err: any) { setError(err.message); throw err; }
-  };
-
-  const registerWithEmail = async (email: string, pass: string, name: string) => {
-    setError(null);
-    try {
-      const res = await createUserWithEmailAndPassword(auth, email, pass);
-      await fbUpdateProfile(res.user, { displayName: name });
-      // Firestore initialization is handled by useEffect
-    } catch (err: any) { setError(err.message); throw err; }
-  };
-
-  const resetPassword = async (email: string) => {
-    setError(null);
-    try { await sendPasswordResetEmail(auth, email); } 
-    catch (err: any) { setError(err.message); throw err; }
-  };
-
-  const logout = async () => {
-    try { await signOut(auth); } catch (err: any) { console.error("Logout error", err); }
   };
 
   return (
     <AuthContext.Provider value={{ 
-      user, profile, loading, profileLoading, loginWithGoogle, loginWithEmail, registerWithEmail, resetPassword, logout, 
-      deductCredit, resetUserCredits, error, clearError: () => setError(null), isAuthModalOpen, setAuthModalOpen
+      user, profile, loading, profileLoading, loginWithGoogle, logout, 
+      deductCredit, resetUserCredits, error, clearError: () => setError(null), isAuthModalOpen, setAuthModalOpen,
+      // Fix: Expose new methods in context provider
+      loginWithEmail, registerWithEmail, resetPassword
     }}>
       {children}
     </AuthContext.Provider>

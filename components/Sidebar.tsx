@@ -10,7 +10,9 @@ import {
   Layout,
   Cpu,
   Target,
-  AlertCircle
+  Key,
+  Activity,
+  Plus
 } from 'lucide-react';
 import { AppSettings } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,15 +20,18 @@ import { useAuth } from '../contexts/AuthContext';
 interface SidebarProps {
   settings: AppSettings;
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
+  onManageKeys: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ settings, setSettings }) => {
+const Sidebar: React.FC<SidebarProps> = ({ settings, setSettings, onManageKeys }) => {
   const { profile } = useAuth();
   const [expanded, setExpanded] = useState({
     engine: true,
     mode: true,
     customization: true,
-    settings: true
+    settings: true,
+    connectivity: true,
+    intelligence: true
   });
 
   const toggleSection = (section: keyof typeof expanded) => {
@@ -60,7 +65,7 @@ const Sidebar: React.FC<SidebarProps> = ({ settings, setSettings }) => {
           <div className="flex bg-bgMain border border-borderMain p-1.5 rounded-2xl gap-1 shadow-inner relative">
             <button 
               onClick={() => updateSetting('engine', 'Gemini')}
-              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-[0.2em] rounded-[0.85rem] transition-all ${settings.engine === 'Gemini' ? 'bg-primary text-[#0a0c10] shadow-lg scale-[1.02]' : 'text-textDim hover:text-textMain'}`}
+              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-[0.2em] rounded-[0.85rem] transition-all ${settings.engine === 'Gemini' ? 'bg-primary text-white shadow-lg scale-[1.02]' : 'text-textDim hover:text-textMain'}`}
             >
               Gemini
             </button>
@@ -108,6 +113,74 @@ const Sidebar: React.FC<SidebarProps> = ({ settings, setSettings }) => {
         )}
       </div>
 
+      {/* Intelligence Settings */}
+      <div className="mb-12">
+         <header 
+          onClick={() => toggleSection('intelligence')}
+          className="flex items-center justify-between w-full text-[10px] font-black text-textDim uppercase tracking-[0.3em] mb-6 cursor-pointer hover:text-primary transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <div className={`p-1 rounded-md transition-colors ${expanded.intelligence ? 'bg-primary/10 text-primary' : ''}`}>
+              {expanded.intelligence ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </div>
+            Intelligence
+          </div>
+          <Activity size={14} className="opacity-40" />
+        </header>
+        {expanded.intelligence && (
+          <div className="space-y-6 px-1">
+             <div className="bg-bgMain p-4 rounded-2xl border border-borderMain shadow-inner">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-[9px] font-black text-textDim uppercase tracking-widest">Temperature</span>
+                  <span className="text-[10px] font-black text-primary px-2 py-0.5 bg-primary/10 rounded">0.15</span>
+                </div>
+                <input type="range" min="0" max="100" defaultValue="15" className="w-full h-1.5 cursor-pointer appearance-none bg-borderMain rounded-full" />
+                <p className="text-[8px] text-textDim font-bold uppercase mt-3 opacity-60 leading-relaxed italic">Lower values provide more consistent microstock results.</p>
+             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Connectivity Status (Manage Keys Trigger) */}
+      <div className="mb-12">
+        <header 
+          onClick={() => toggleSection('connectivity')}
+          className="flex items-center justify-between w-full text-[10px] font-black text-textDim uppercase tracking-[0.3em] mb-4 cursor-pointer hover:text-primary transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <div className={`p-1 rounded-md transition-colors ${expanded.connectivity ? 'bg-primary/10 text-primary' : ''}`}>
+              {expanded.connectivity ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </div>
+            AI Connectivity
+          </div>
+          <Key size={14} className="opacity-40" />
+        </header>
+        {expanded.connectivity && (
+          <div className="px-1 space-y-3">
+            <button 
+              onClick={onManageKeys}
+              className="w-full bg-white dark:bg-white/5 border border-borderMain rounded-xl p-4 flex items-center justify-between hover:border-primary/40 transition-all group"
+            >
+               <div className="flex items-center gap-3 text-left">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all"><Key size={14} /></div>
+                  <div className="space-y-0.5">
+                    <p className="text-[9px] font-black text-textMain uppercase tracking-widest">Manage Keys</p>
+                    <p className="text-[8px] text-textDim font-bold uppercase">Configure custom APIs</p>
+                  </div>
+               </div>
+               <Plus size={14} className="text-textDim opacity-40 group-hover:opacity-100 transition-opacity" />
+            </button>
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-center gap-3">
+               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+               <div className="space-y-0.5">
+                  <p className="text-[9px] font-black text-primary uppercase tracking-widest">Engine Ready</p>
+                  <p className="text-[8px] text-textDim font-bold uppercase">Cloud cluster active</p>
+               </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Metadata Customization */}
       {isExtractionMode && (
         <div className="mb-12">
@@ -141,32 +214,6 @@ const Sidebar: React.FC<SidebarProps> = ({ settings, setSettings }) => {
           )}
         </div>
       )}
-
-      {/* AI Preferences */}
-      {isExtractionMode && (
-        <div className="mb-10">
-          <header 
-            onClick={() => toggleSection('settings')}
-            className="flex items-center justify-between w-full text-[10px] font-black text-textDim uppercase tracking-[0.3em] mb-6 cursor-pointer hover:text-primary transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <div className={`p-1 rounded-md transition-colors ${expanded.settings ? 'bg-primary/10 text-primary' : ''}`}>
-                {expanded.settings ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              </div>
-              AI Constraints
-            </div>
-            <Target size={14} className="opacity-40" />
-          </header>
-          {expanded.settings && (
-            <div className="space-y-5 bg-bgMain p-4 rounded-2xl border border-borderMain shadow-inner">
-              <SidebarToggle label="Single Keywords" active={settings.singleWordKeywords} onToggle={() => updateSetting('singleWordKeywords', !settings.singleWordKeywords)} />
-              <SidebarToggle label="Style Silhouette" active={settings.silhouette} onToggle={() => updateSetting('silhouette', !settings.silhouette)} />
-              <SidebarToggle label="Isolated Only" active={settings.transparentBackground} onToggle={() => updateSetting('transparentBackground', !settings.transparentBackground)} />
-              <SidebarToggle label="Safe Words" active={settings.prohibitedWords} onToggle={() => updateSetting('prohibitedWords', !settings.prohibitedWords)} />
-            </div>
-          )}
-        </div>
-      )}
     </aside>
   );
 };
@@ -177,7 +224,7 @@ const ModeButton: React.FC<{ label: string, icon: React.ReactNode, active: boole
     className={`flex flex-col gap-1 w-full px-5 py-5 rounded-[1.25rem] text-left transition-all duration-300 border-2 active:scale-95 ${active ? 'bg-primary/5 text-primary border-primary/30 shadow-[0_10px_20px_-5px_rgba(0,212,255,0.1)] scale-[1.02]' : 'text-textDim hover:text-textMain hover:bg-bgMain border-transparent'}`}
   >
     <div className="flex items-center gap-3 text-[11px] font-black uppercase tracking-[0.15em]">
-      <div className={`p-2 rounded-xl transition-all ${active ? 'bg-primary text-[#0a0c10]' : 'bg-bgMain text-textDim'}`}>
+      <div className={`p-2 rounded-xl transition-all ${active ? 'bg-primary text-white' : 'bg-bgMain text-textDim'}`}>
         {icon}
       </div>
       {label}

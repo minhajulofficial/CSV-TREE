@@ -2,7 +2,15 @@
 export type Platform = 'General' | 'AdobeStock' | 'Freepik' | 'Shutterstock' | 'Vecteezy' | 'Depositphotos' | '123RF' | 'Dreamstime';
 export type FileType = 'Images' | 'Vectors' | 'Videos';
 export type AIEngine = 'Gemini' | 'Groq';
-export type AppView = 'Home' | 'Admin';
+export type AppView = 'Home' | 'Admin' | 'About' | 'Pricing' | 'Tutorials' | 'Privacy' | 'Terms';
+
+export interface APIKeyRecord {
+  id: string;
+  label: string;
+  key: string;
+  provider: 'Gemini' | 'Groq';
+  createdAt: string;
+}
 
 export interface UserProfile {
   credits: number;
@@ -11,6 +19,7 @@ export interface UserProfile {
   email?: string;
   displayName?: string;
   lastResetDate?: string;
+  apiKeys?: Record<string, APIKeyRecord>;
 }
 
 export interface AppSettings {

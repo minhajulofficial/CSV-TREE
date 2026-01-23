@@ -1,22 +1,26 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { AppSettings } from "../types";
+import { AppSettings, APIKeyRecord } from "../types";
 
-/**
- * Processes an image using Gemini AI to extract microstock metadata or generate prompts.
- * Strictly adheres to using process.env.API_KEY as per security guidelines.
- */
-export const processImageWithGemini = async (imageBase64: string, settings: AppSettings) => {
+export const processImageWithGemini = async (imageBase64: string, settings: AppSettings, customKeys?: Record<string, APIKeyRecord>) => {
   try {
     const mimeType = imageBase64.match(/data:([^;]+);base64/)?.[1] || "image/jpeg";
     const base64Data = imageBase64.split(',')[1];
 
-    // API key must be obtained exclusively from process.env.API_KEY
-    if (!process.env.API_KEY) {
-      throw new Error("Gemini API Key is not configured in the environment.");
+    // Priority 1: Use User's custom Gemini Key
+    // Priority 2: Use process.env.API_KEY
+    let targetKey = process.env.API_KEY;
+    
+    if (customKeys) {
+      const userKey = Object.values(customKeys).find(k => k.provider === 'Gemini');
+      if (userKey) targetKey = userKey.key;
     }
 
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    if (!targetKey) {
+      throw new Error("No Gemini API Key available. Please add one in settings or contact admin.");
+    }
+
+    const ai = new GoogleGenAI({ apiKey: targetKey });
     
     let systemPrompt = "";
     let responseSchema: any = {};
@@ -44,7 +48,7 @@ export const processImageWithGemini = async (imageBase64: string, settings: AppS
         required: ["title", "keywords", "description", "categories"]
       };
     } else {
-      systemPrompt = "Act as a Prompt Engineering Specialist. Reverse-engineer this image to provide the most effective AI generation prompt (Midjourney/DALL-E style). Output format: { \"prompt\": \"...\" }";
+      systemPrompt = "Act as a Prompt Engineering Specialist. Reverse-engineer this image to provide the most effective AI generation prompt. Output format: { \"prompt\": \"...\" }";
       responseSchema = {
         type: Type.OBJECT,
         properties: {
@@ -72,7 +76,7 @@ export const processImageWithGemini = async (imageBase64: string, settings: AppS
     const text = response.text || "{}";
     return JSON.parse(text);
   } catch (error: any) {
-    console.error("Gemini Critical Failure:", error);
-    throw new Error(error.message || "Gemini engine failed to respond. Verify your environment configuration.");
+    console.error("Gemini Error:", error);
+    throw new Error(error.message || "Gemini engine failure.");
   }
 };

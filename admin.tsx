@@ -2,15 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { 
   auth, 
-  db, 
+  rtdb, 
   onAuthStateChanged, 
-  collection, 
-  onSnapshot, 
-  doc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  orderBy 
+  ref, 
+  onValue, 
+  update, 
+  remove
 } from "./services/firebase";
 import { Loader2, Shield, Users, CreditCard, LogOut, ExternalLink } from 'lucide-react';
 
@@ -36,17 +33,27 @@ const AdminPanel = () => {
     return unsub;
   }, [loading]);
 
+  // Fix: Converted Firestore query/snapshot to RTDB onValue as Firestore exports were missing
   const initSync = () => {
-    const q = query(collection(db, 'users'), orderBy('tier', 'desc'));
-    const unsubscribe = onSnapshot(q, (snap) => {
-      setAllUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    const usersRef = ref(rtdb, 'users');
+    const unsubscribe = onValue(usersRef, (snap) => {
+      const data = snap.val();
+      if (data) {
+        const list = Object.entries(data).map(([id, val]) => ({ id, ...(val as any) }));
+        // Manual sort as RTDB query capabilities are more limited than Firestore
+        list.sort((a, b) => (b.tier === 'Premium' ? -1 : 1));
+        setAllUsers(list);
+      } else {
+        setAllUsers([]);
+      }
     });
     return unsubscribe;
   };
 
+  // Fix: Converted updateDoc to RTDB update
   const adjustCredits = async (id: string, current: number, amount: number) => {
     try {
-      await updateDoc(doc(db, 'users', id), { 
+      await update(ref(rtdb, `users/${id}`), { 
         credits: (current || 0) + amount,
         maxCredits: Math.max((current || 0) + amount, 100)
       });
@@ -55,10 +62,11 @@ const AdminPanel = () => {
     }
   };
 
+  // Fix: Converted updateDoc to RTDB update
   const toggleTier = async (id: string, current: string) => {
     try {
       const newTier = current === 'Premium' ? 'Free' : 'Premium';
-      await updateDoc(doc(db, 'users', id), { 
+      await update(ref(rtdb, `users/${id}`), { 
         tier: newTier,
         credits: newTier === 'Premium' ? 6000 : 100,
         maxCredits: newTier === 'Premium' ? 6000 : 100

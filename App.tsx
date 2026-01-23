@@ -1,16 +1,20 @@
+
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, ChevronRight, X, Layers, Cpu, Sparkles } from 'lucide-react';
+import { Upload, Download, ChevronRight, X, Layers, Cpu, Sparkles, ArrowLeft } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
 import PlatformPills from './components/PlatformPills';
 import ResultCard from './components/ResultCard';
 import AdminView from './components/AdminView';
+import ManageKeysModal from './components/ManageKeysModal';
 import { DEFAULT_SETTINGS } from './constants';
 import { AppSettings, ExtractedMetadata, FileType, AppView } from './types';
 import { processImageWithGemini } from './services/geminiService';
 import { processImageWithGroq } from './services/groqService';
 import { useAuth } from './contexts/AuthContext';
+// Fix: Added 'update' to imports from './services/firebase'
+import { rtdb, ref, onValue, set, remove, push, update } from './services/firebase';
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>('Home');
@@ -18,6 +22,7 @@ const App: React.FC = () => {
   const [items, setItems] = useState<ExtractedMetadata[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isKeysModalOpen, setKeysModalOpen] = useState(false);
   const { user, profile, deductCredit, setAuthModalOpen } = useAuth();
 
   useEffect(() => {
@@ -31,10 +36,29 @@ const App: React.FC = () => {
     localStorage.setItem('csv-tree-settings', JSON.stringify(settings));
   }, [settings]);
 
-  // View Switcher for Admin Panel
-  if (view === 'Admin') {
-    return <AdminView onBack={() => setView('Home')} />;
-  }
+  // Sync Metadata for Current User
+  useEffect(() => {
+    if (!user) {
+      setItems([]);
+      return;
+    }
+    const metadataRef = ref(rtdb, `metadata/${user.uid}`);
+    const unsubscribe = onValue(metadataRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const list = Object.entries(data).map(([id, val]) => ({
+          ...(val as any),
+          id
+        })).reverse();
+        setItems(list);
+      } else {
+        setItems([]);
+      }
+    }, (error) => {
+      console.error("Metadata Sync Failure:", error);
+    });
+    return () => unsubscribe();
+  }, [user]);
 
   const processFile = async (file: File) => {
     const reader = new FileReader();
@@ -42,7 +66,7 @@ const App: React.FC = () => {
       reader.onload = async (e) => {
         const base64 = e.target?.result as string;
         resolve({
-          id: Math.random().toString(36).substr(2, 9),
+          id: '',
           thumbnail: base64,
           status: 'pending',
           fileName: file.name,
@@ -55,49 +79,62 @@ const App: React.FC = () => {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!user) { setAuthModalOpen(true); return; }
-    
     const files = Array.from(e.target.files || []) as File[];
     if (files.length === 0) return;
     
     if (profile && profile.credits < files.length) {
-      alert(`Insufficient energy units. Required: ${files.length}, Available: ${profile.credits}`);
+      alert(`Insufficient Credits. Required: ${files.length}, Available: ${profile.credits}`);
       return;
     }
 
-    const newItems: ExtractedMetadata[] = [];
+    const batch: ExtractedMetadata[] = [];
     for (const file of files) { 
-      newItems.push(await processFile(file)); 
+      try {
+        const item = await processFile(file);
+        const newRef = push(ref(rtdb, `metadata/${user.uid}`));
+        item.id = newRef.key || Math.random().toString();
+        await set(newRef, item);
+        batch.push(item);
+      } catch (err) {
+        console.error("File Prep Error:", err);
+      }
     }
-    setItems(prev => [...newItems, ...prev]);
-    processBatch(newItems);
+    processBatch(batch);
   };
 
   const processBatch = async (batch: ExtractedMetadata[]) => {
+    if (!user) return;
     setIsProcessing(true);
     for (const item of batch) {
-      if (profile && profile.credits <= 0) {
-        setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'error' } : i));
+      const itemRef = ref(rtdb, `metadata/${user.uid}/${item.id}`);
+      
+      // Safety Check
+      const currentProfile = profile; 
+      if (!currentProfile || currentProfile.credits <= 0) {
+        await update(itemRef, { status: 'error' });
         continue;
       }
-      setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'processing' } : i));
+
+      await update(itemRef, { status: 'processing' });
+      
       try {
         let result;
         if (settings.engine === 'Groq') {
+          // Pass custom keys if available
           result = await processImageWithGroq(item.thumbnail, settings);
         } else {
-          result = await processImageWithGemini(item.thumbnail, settings);
+          result = await processImageWithGemini(item.thumbnail, settings, profile?.apiKeys);
         }
 
-        const creditDeducted = await deductCredit(1);
-        if (creditDeducted) {
-          setItems(prev => prev.map(i => i.id === item.id ? { ...i, ...result, status: 'completed' } : i));
+        const success = await deductCredit(1);
+        if (success) {
+          await update(itemRef, { ...result, status: 'completed' });
         } else {
-          setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'error' } : i));
-          break;
+          await update(itemRef, { status: 'error' });
         }
       } catch (error: any) {
-        console.error("Critical Engine Failure:", error);
-        setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'error' } : i));
+        console.error("Processing Critical Error:", error);
+        await update(itemRef, { status: 'error' });
       }
     }
     setIsProcessing(false);
@@ -107,13 +144,17 @@ const App: React.FC = () => {
     e.preventDefault(); 
     setIsDragging(false);
     if (!user) { setAuthModalOpen(true); return; }
-    
     const files = Array.from(e.dataTransfer.files) as File[];
     if (files.length > 0) {
-      const newItems: ExtractedMetadata[] = [];
-      for (const file of files) { newItems.push(await processFile(file)); }
-      setItems(prev => [...newItems, ...prev]);
-      processBatch(newItems);
+      const batch: ExtractedMetadata[] = [];
+      for (const file of files) { 
+        const item = await processFile(file);
+        const newRef = push(ref(rtdb, `metadata/${user.uid}`));
+        item.id = newRef.key || '';
+        await set(newRef, item);
+        batch.push(item);
+      }
+      processBatch(batch);
     }
   };
 
@@ -126,18 +167,17 @@ const App: React.FC = () => {
     const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].map(e => e.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(",")).join("\n");
     const link = document.createElement("a");
     link.setAttribute("href", encodeURI(csvContent));
-    link.setAttribute("download", `CSV_TREE_Batch_Export.csv`);
+    link.setAttribute("download", `CSV_TREE_Export.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  return (
-    <div className="min-h-screen bg-bgMain text-textMain transition-all duration-300 selection:bg-primary/30 flex flex-col">
-      <Navbar onSwitchView={setView} />
-      <Sidebar settings={settings} setSettings={setSettings} />
-      
-      <main className="pl-[280px] pt-16 flex-grow transition-all">
+  if (view === 'Admin') return <AdminView onBack={() => setView('Home')} />;
+
+  const renderContent = () => {
+    if (view === 'Home') {
+      return (
         <div className="max-w-6xl mx-auto px-10 py-16">
           <PlatformPills selected={settings.platform} onSelect={(p) => setSettings(s => ({ ...s, platform: p }))} />
           
@@ -158,10 +198,10 @@ const App: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-center gap-2 mb-2">
                    <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all ${settings.engine === 'Groq' ? 'bg-accent/10 text-accent border border-accent/20' : 'bg-primary/10 text-primary border border-primary/20'}`}>
-                      <Sparkles size={12} className="animate-pulse" /> AI {settings.engine} Processor
+                      <Sparkles size={12} className="animate-pulse" /> AI {settings.engine} Active
                    </div>
                 </div>
-                <h1 className="text-7xl font-black tracking-tighter text-textMain drop-shadow-2xl uppercase italic">
+                <h1 className="text-7xl font-black tracking-tighter text-textMain drop-shadow-2xl uppercase italic leading-none">
                    {settings.mode === 'Metadata' ? 'Metadata Vision' : 'Prompt Engineer'}
                 </h1>
               </div>
@@ -180,9 +220,7 @@ const App: React.FC = () => {
 
               <div className="pt-4">
                 <label className={`group/btn relative px-16 py-6 rounded-2xl font-black cursor-pointer transition-all duration-500 shadow-xl inline-flex items-center gap-5 overflow-hidden bg-primary text-white shadow-primary/20 hover:shadow-primary/40 hover:scale-105 active:scale-95`}>
-                  <span className="relative z-10 tracking-[0.3em] uppercase text-xs">
-                    Initialize Batch
-                  </span>
+                  <span className="relative z-10 tracking-[0.3em] uppercase text-xs">Initialize Batch</span>
                   <ChevronRight size={20} strokeWidth={4} className="relative z-10 group-hover/btn:translate-x-1.5 transition-transform" />
                   <input type="file" multiple className="hidden" onChange={handleFileUpload} accept="image/*" />
                 </label>
@@ -197,28 +235,50 @@ const App: React.FC = () => {
                    <h2 className="text-4xl font-black italic tracking-tighter text-textMain uppercase">Production Queue</h2>
                    <div className="flex items-center gap-3 text-textDim text-[10px] font-black uppercase tracking-widest opacity-60">
                      <Layers size={14} className="text-primary" /> 
-                     <span>Processed {items.filter(i => i.status === 'completed').length} / {items.length} Modules</span>
+                     <span>Synced {items.length} Units from Cloud</span>
                    </div>
                 </div>
-                
-                <div className="flex flex-wrap items-center gap-6 bg-surface p-4 rounded-3xl border border-borderMain backdrop-blur-3xl shadow-2xl">
+                <div className="flex flex-wrap items-center gap-6 bg-surface p-4 rounded-3xl border border-borderMain shadow-2xl">
                    <button onClick={downloadAllCSV} className="flex items-center gap-3 text-[10px] font-black text-white bg-primary px-10 py-4 rounded-xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-[0.2em] shadow-xl shadow-primary/20">
-                      <Download size={18} strokeWidth={3} /> Bulk Export
+                      <Download size={18} /> Bulk Export
                    </button>
-                   <button onClick={() => confirm('Purge current session logs?') && setItems([])} className="flex items-center gap-3 text-[10px] font-black text-textMain bg-bgMain border border-borderMain px-8 py-4 rounded-xl hover:bg-red-500/10 hover:border-red-500/30 active:scale-95 transition-all uppercase tracking-[0.2em]">
-                      <X size={18} strokeWidth={3} /> Clear
+                   <button onClick={() => user && remove(ref(rtdb, `metadata/${user.uid}`))} className="flex items-center gap-3 text-[10px] font-black text-textMain bg-bgMain border border-borderMain px-8 py-4 rounded-xl hover:bg-red-500/10 hover:border-red-500/30 active:scale-95 transition-all uppercase tracking-[0.2em]">
+                      <X size={18} /> Purge Queue
                    </button>
                 </div>
               </div>
-
               <div className="space-y-16">
-                {items.map(item => <ResultCard key={item.id} item={item} onRegenerate={() => processBatch([item])} onDelete={() => setItems(prev => prev.filter(i => i.id !== item.id))} />)}
+                {items.map(item => <ResultCard key={item.id} item={item} onRegenerate={() => processBatch([item])} onDelete={() => user && remove(ref(rtdb, `metadata/${user.uid}/${item.id}`))} />)}
               </div>
             </div>
           )}
         </div>
-      </main>
-      <Footer />
+      );
+    }
+    return (
+      <div className="max-w-4xl mx-auto px-10 py-32 space-y-12 animate-in fade-in slide-in-from-bottom-4">
+        <button onClick={() => setView('Home')} className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest hover:gap-3 transition-all"><ArrowLeft size={16} /> Return Home</button>
+        <div className="space-y-4">
+          <h1 className="text-6xl font-black italic tracking-tight uppercase leading-none">{view}</h1>
+          <div className="h-2 w-24 bg-primary rounded-full" />
+        </div>
+        <div className="prose dark:prose-invert max-w-none text-textDim font-medium leading-relaxed text-lg italic">
+          {view === 'About' && "CSV TREE Pro transforms visual assets into searchable, indexed metadata using high-frequency AI clusters. Our mission is to accelerate creator workflows through intelligence."}
+          {view === 'Pricing' && "Free operators receive 100 energy units daily. Premium members gain priority access to our compute clusters with 6,000 units per month and early access to new AI models."}
+          {view === 'Tutorials' && "Select your distribution target (e.g., AdobeStock), configure your title and tag length constraints in the sidebar, then drop your media to begin extraction."}
+          {(view === 'Privacy' || view === 'Terms') && "Your data remains your property. We operate as a zero-retention bridge between your media and AI engines. All session logs can be purged at any time by the user."}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-bgMain text-textMain transition-all duration-300 selection:bg-primary/30 flex flex-col">
+      <Navbar onSwitchView={setView} onManageKeys={() => setKeysModalOpen(true)} />
+      <Sidebar settings={settings} setSettings={setSettings} onManageKeys={() => setKeysModalOpen(true)} />
+      <main className="pl-[280px] pt-16 flex-grow transition-all">{renderContent()}</main>
+      <Footer onNavigate={setView} />
+      <ManageKeysModal isOpen={isKeysModalOpen} onClose={() => setKeysModalOpen(false)} />
     </div>
   );
 };
