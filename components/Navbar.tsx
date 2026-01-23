@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   LogOut, User as UserIcon, Loader2, 
@@ -5,11 +6,16 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { AppView } from '../types';
 import AuthModal from './AuthModal';
 
 const ADMIN_EMAILS = ["minhajulofficial.bd@gmail.com"];
 
-const Navbar: React.FC = () => {
+interface NavbarProps {
+  onSwitchView: (view: AppView) => void;
+}
+
+const Navbar: React.FC<NavbarProps> = ({ onSwitchView }) => {
   const { user, profile, logout, loading, profileLoading, setAuthModalOpen, resetUserCredits, error } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -29,7 +35,7 @@ const Navbar: React.FC = () => {
     <>
       <nav className="fixed top-0 left-0 right-0 h-16 bg-bgMain/80 backdrop-blur-2xl border-b border-borderMain flex items-center justify-between px-10 z-50 transition-colors">
         <div className="flex items-center gap-10">
-          <div className="flex items-center gap-1 text-2xl font-black tracking-tighter group cursor-pointer" onClick={() => window.location.reload()}>
+          <div className="flex items-center gap-1 text-2xl font-black tracking-tighter group cursor-pointer" onClick={() => onSwitchView('Home')}>
             <span className="text-primary transition-all">CSV</span>
             <span className="text-accent">TREE</span>
           </div>
@@ -92,9 +98,9 @@ const Navbar: React.FC = () => {
 
                   <div className="p-4 space-y-2">
                     {isAdmin && (
-                      <a href="admin.html" className="w-full py-4 px-6 rounded-2xl bg-primary/5 border border-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-3">
+                      <button onClick={() => { onSwitchView('Admin'); setIsProfileOpen(false); }} className="w-full py-4 px-6 rounded-2xl bg-primary/5 border border-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-3">
                         <Shield size={14} /> Admin Command Center
-                      </a>
+                      </button>
                     )}
                     
                     {error && (
@@ -108,7 +114,7 @@ const Navbar: React.FC = () => {
                        <Sparkles size={14} className="text-primary mt-0.5" />
                        <div className="space-y-1">
                           <p className="text-[10px] font-black text-primary uppercase tracking-widest">Platform Sync</p>
-                          <p className="text-[9px] text-textDim font-bold leading-relaxed italic uppercase">System engines are automatically provisioned. Manual API management is disabled.</p>
+                          <p className="text-[9px] text-textDim font-bold leading-relaxed italic uppercase">System engines are automatically provisioned.</p>
                        </div>
                     </div>
                   </div>

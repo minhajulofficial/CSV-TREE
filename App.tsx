@@ -6,13 +6,15 @@ import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
 import PlatformPills from './components/PlatformPills';
 import ResultCard from './components/ResultCard';
+import AdminView from './components/AdminView';
 import { DEFAULT_SETTINGS } from './constants';
-import { AppSettings, ExtractedMetadata, FileType } from './types';
+import { AppSettings, ExtractedMetadata, FileType, AppView } from './types';
 import { processImageWithGemini } from './services/geminiService';
 import { processImageWithGroq } from './services/groqService';
 import { useAuth } from './contexts/AuthContext';
 
 const App: React.FC = () => {
+  const [view, setView] = useState<AppView>('Home');
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [items, setItems] = useState<ExtractedMetadata[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -29,6 +31,10 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('csv-tree-settings', JSON.stringify(settings));
   }, [settings]);
+
+  if (view === 'Admin') {
+    return <AdminView onBack={() => setView('Home')} />;
+  }
 
   const processFile = async (file: File) => {
     const reader = new FileReader();
@@ -92,7 +98,6 @@ const App: React.FC = () => {
       } catch (error: any) {
         console.error("Batch error:", error);
         setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'error' } : i));
-        alert(error.message || "AI engine failed to respond. Check environment setup.");
       }
     }
     setIsProcessing(false);
@@ -129,7 +134,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-bgMain text-textMain transition-all duration-300 selection:bg-primary/30 flex flex-col">
-      <Navbar />
+      <Navbar onSwitchView={setView} />
       <Sidebar settings={settings} setSettings={setSettings} />
       
       <main className="pl-[260px] pt-16 flex-grow transition-all">

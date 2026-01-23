@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   auth, 
@@ -52,8 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser as User | null);
-      setLoading(false);
-
+      
       if (currentUser) {
         setAuthModalOpen(false);
         setProfileLoading(true);
@@ -67,22 +67,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setProfile(snapshot.data() as UserProfile);
             setProfileLoading(false);
           } else {
-            // New user setup for Google or Email login
+            // New user initialization
             const initialSetup = {
               credits: 100,
               maxCredits: 100,
               tier: 'Free',
+              email: currentUser.email,
+              displayName: currentUser.displayName,
               lastResetDate: new Date().toISOString()
             };
             setDoc(userDocRef, initialSetup, { merge: true })
               .then(() => setProfileLoading(false))
-              .catch(err => {
-                console.warn("Profile Initialization Error:", err.message);
-                setProfileLoading(false);
-              });
+              .catch(() => setProfileLoading(false));
           }
         }, (err) => {
-          console.error("Profile sync error:", err);
+          console.error("Sync error", err);
           setProfileLoading(false);
         });
       } else {
@@ -90,6 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProfileLoading(false);
         if (unsubscribeProfile) unsubscribeProfile();
       }
+      setLoading(false);
     });
 
     return () => {
@@ -112,8 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user || !profile) return;
     try {
       const amount = profile.tier === 'Premium' ? 6000 : 100;
-      const userDocRef = doc(db, 'users', user.uid);
-      await updateDoc(userDocRef, { 
+      await updateDoc(doc(db, 'users', user.uid), { 
         credits: amount,
         maxCredits: amount,
         lastResetDate: new Date().toISOString() 
@@ -121,16 +120,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) { setError("Sync failed."); }
   };
 
-  const clearError = () => setError(null);
-
   const loginWithGoogle = async () => {
     setError(null);
-    try { 
-      await signInWithPopup(auth, googleProvider); 
-    } 
+    try { await signInWithPopup(auth, googleProvider); } 
     catch (err: any) { 
       if (err.code !== 'auth/popup-closed-by-user') {
-        setError(err.message); 
+        setError(err.message);
         throw err;
       }
     }
@@ -138,13 +133,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithEmail = async (email: string, pass: string) => {
     setError(null);
-    try { 
-      await signInWithEmailAndPassword(auth, email, pass); 
-    } 
-    catch (err: any) { 
-      setError(err.message); 
-      throw err; 
-    }
+    try { await signInWithEmailAndPassword(auth, email, pass); } 
+    catch (err: any) { setError(err.message); throw err; }
   };
 
   const registerWithEmail = async (email: string, pass: string, name: string) => {
@@ -152,19 +142,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await createUserWithEmailAndPassword(auth, email, pass);
       await fbUpdateProfile(res.user, { displayName: name });
-    } catch (err: any) { 
-      setError(err.message); 
-      throw err; 
-    }
+    } catch (err: any) { setError(err.message); throw err; }
   };
 
   const resetPassword = async (email: string) => {
     setError(null);
     try { await sendPasswordResetEmail(auth, email); } 
-    catch (err: any) { 
-      setError(err.message); 
-      throw err; 
-    }
+    catch (err: any) { setError(err.message); throw err; }
   };
 
   const logout = async () => {
@@ -174,7 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <AuthContext.Provider value={{ 
       user, profile, loading, profileLoading, loginWithGoogle, loginWithEmail, registerWithEmail, resetPassword, logout, 
-      deductCredit, resetUserCredits, error, clearError, isAuthModalOpen, setAuthModalOpen
+      deductCredit, resetUserCredits, error, clearError: () => setError(null), isAuthModalOpen, setAuthModalOpen
     }}>
       {children}
     </AuthContext.Provider>
@@ -183,6 +167,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
+  if (context === undefined) throw new Error('useAuth error');
   return context;
 };

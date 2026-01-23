@@ -1,16 +1,16 @@
 
 export type Platform = 'General' | 'AdobeStock' | 'Freepik' | 'Shutterstock' | 'Vecteezy' | 'Depositphotos' | '123RF' | 'Dreamstime';
-
 export type FileType = 'Images' | 'Vectors' | 'Videos';
-
 export type AIEngine = 'Gemini' | 'Groq';
+export type AppView = 'Home' | 'Admin';
 
 export interface UserProfile {
   credits: number;
   maxCredits: number;
   tier: 'Free' | 'Premium';
-  // API keys are strictly managed via environment variables and not stored in user profiles
-  lastResetDate?: string; // ISO string
+  email?: string;
+  displayName?: string;
+  lastResetDate?: string;
 }
 
 export interface AppSettings {
