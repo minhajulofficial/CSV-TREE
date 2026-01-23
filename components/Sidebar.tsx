@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   ChevronDown, 
@@ -16,8 +15,8 @@ interface SidebarProps {
   settings: AppSettings;
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   onManageKeys: () => void;
-  isOpen?: boolean;
-  onClose?: () => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ settings, setSettings, onManageKeys, isOpen, onClose }) => {
@@ -40,12 +39,13 @@ const Sidebar: React.FC<SidebarProps> = ({ settings, setSettings, onManageKeys, 
   const sidebarClasses = `
     w-[280px] fixed left-0 top-0 md:top-16 bottom-0 bg-white dark:bg-[#0a180e] 
     border-r border-slate-100 dark:border-white/5 overflow-y-auto px-5 py-8 z-[70] 
-    select-none no-scrollbar transition-all duration-300 shadow-xl md:shadow-sm
-    ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+    select-none no-scrollbar transition-all duration-300 shadow-xl md:shadow-none
+    ${isOpen ? 'translate-x-0' : '-translate-x-full'}
   `;
 
   return (
     <>
+      {/* Overlay for mobile only */}
       {isOpen && <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[65] md:hidden" onClick={onClose} />}
       
       <aside className={sidebarClasses}>

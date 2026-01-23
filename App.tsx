@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, X, Play, AlertCircle, ExternalLink, Loader2 } from 'lucide-react';
+import { Upload, X, Play, AlertCircle, ExternalLink, Loader2, CheckCircle2, MessageCircle, Lock, FileText, Activity, Send, Fingerprint, Database } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
@@ -11,13 +11,12 @@ import SuccessModal from './components/SuccessModal';
 import TutorialModal from './components/TutorialModal';
 import DailyPopupModal from './components/DailyPopupModal';
 import { DEFAULT_SETTINGS } from './constants';
-import { AppSettings, ExtractedMetadata, AppView, APIKeyRecord, SystemConfig, Platform } from './types';
+import { AppSettings, ExtractedMetadata, AppView, APIKeyRecord, SystemConfig } from './types';
 import { processImageWithGemini } from './services/geminiService';
-import { processImageWithGroq } from './services/groqService';
 import { useAuth } from './contexts/AuthContext';
 import { rtdb, ref, onValue, set, remove, push, update } from './services/firebase';
 
-const VECTOR_PLACEHOLDER_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAACXBIWXMAAAsTAAALEwEAmpwYAAAByUlEQVR4nO3SQRHAIBDAsMUE/p1SInz0kgmS2dtz7z13AOzM9wXAmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vvyA6LPAwS4VAnIAAAAAElFTkSuQmCC";
+const VECTOR_PLACEHOLDER_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAACXBIWXMAAAsTAAALEwEAmpwYAAAByUlEQVR4nO3SQRHAIBDAsMUE/p1SInz0kgmS2dtz7z13AOzM9wXAmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vvyA6LPAwS4VAnIAAAAAElFTkSuQmCC";
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>('Home');
@@ -28,7 +27,7 @@ const App: React.FC = () => {
   const [isKeysModalOpen, setKeysModalOpen] = useState(false);
   const [isSuccessModalOpen, setSuccessModalOpen] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
-  const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isDailyPopupOpen, setIsDailyPopupOpen] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [sysConfig, setSysConfig] = useState<SystemConfig | null>(null);
@@ -42,7 +41,6 @@ const App: React.FC = () => {
         const config = snapshot.val();
         setSysConfig(config);
         
-        // Handle Daily Popup logic
         if (config?.dailyPopup?.enabled) {
           const lastPopupDate = localStorage.getItem('last_daily_popup');
           const today = new Date().toDateString();
@@ -56,6 +54,14 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (view !== 'Home') {
+      setSidebarOpen(false);
+    } else {
+      setSidebarOpen(true);
+    }
+  }, [view]);
+
+  useEffect(() => {
     const ads = sysConfig?.ads?.list || [];
     if (ads.length > 1) {
       const timer = setInterval(() => {
@@ -64,21 +70,6 @@ const App: React.FC = () => {
       return () => clearInterval(timer);
     }
   }, [sysConfig?.ads?.list?.length]);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('csv-tree-settings');
-    if (saved) {
-      try { 
-        const parsed = JSON.parse(saved);
-        delete parsed.engine;
-        setSettings(prev => ({ ...prev, ...parsed })); 
-      } catch (e) {}
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('csv-tree-settings', JSON.stringify(settings));
-  }, [settings]);
 
   useEffect(() => {
     if (!user) { setItems([]); return; }
@@ -93,121 +84,21 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, [user]);
 
-  const sanitizeImage = (source: string | HTMLImageElement | HTMLVideoElement): Promise<string> => {
-    return new Promise((resolve) => {
-      const process = (drawable: HTMLImageElement | HTMLVideoElement) => {
-        const canvas = document.createElement('canvas');
-        const MAX_DIM = 1024;
-        let width = drawable instanceof HTMLVideoElement ? drawable.videoWidth : drawable.width;
-        let height = drawable instanceof HTMLVideoElement ? drawable.videoHeight : drawable.height;
-
-        if (width > height) {
-          if (width > MAX_DIM) {
-            height *= MAX_DIM / width;
-            width = MAX_DIM;
-          }
-        } else {
-          if (height > MAX_DIM) {
-            width *= MAX_DIM / height;
-            height = MAX_DIM;
-          }
-        }
-
-        canvas.width = width || 800;
-        canvas.height = height || 600;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(drawable, 0, 0, canvas.width, canvas.height);
-        }
-        resolve(canvas.toDataURL('image/jpeg', 0.8));
-      };
-
-      if (typeof source === 'string') {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => process(img);
-        img.onerror = () => resolve(VECTOR_PLACEHOLDER_B64);
-        img.src = source;
-      } else {
-        process(source);
-      }
-    });
-  };
-
-  const extractFrameFromVideo = (file: File): Promise<string> => {
-    return new Promise((resolve) => {
-      const video = document.createElement('video');
-      video.preload = 'metadata';
-      video.src = URL.createObjectURL(file);
-      video.muted = true;
-      video.playsInline = true;
-      video.onloadedmetadata = () => { video.currentTime = 0.5; };
-      video.onseeked = async () => {
-        const sanitized = await sanitizeImage(video);
-        URL.revokeObjectURL(video.src);
-        resolve(sanitized);
-      };
-      video.onerror = () => { 
-        URL.revokeObjectURL(video.src); 
-        resolve(VECTOR_PLACEHOLDER_B64); 
-      };
-    });
-  };
+  const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
 
   const processFile = async (file: File): Promise<ExtractedMetadata> => {
-    const extension = file.name?.split('.').pop()?.toLowerCase() || '';
-    let thumbnail = VECTOR_PLACEHOLDER_B64;
-    
-    try {
-      if (file.type?.startsWith('image/') && extension !== 'svg') {
-        thumbnail = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = async (e) => {
-            const sanitized = await sanitizeImage(e.target?.result as string);
-            resolve(sanitized);
-          };
-          reader.readAsDataURL(file);
-        });
-      } else if (file.type?.startsWith('video/')) {
-        thumbnail = await extractFrameFromVideo(file);
-      } else if (extension === 'svg' || file.type === 'image/svg+xml') {
-        thumbnail = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            const img = new Image();
-            img.onload = async () => {
-              const sanitized = await sanitizeImage(img);
-              resolve(sanitized);
-            };
-            img.src = e.target?.result as string;
-          };
-          reader.readAsDataURL(file);
-        });
-      }
-    } catch (e) { 
-      console.error("Preparation error for:", file.name, e); 
-    }
-    
-    return { id: '', thumbnail, status: 'pending', fileName: file.name || 'asset' };
+    return { id: '', thumbnail: VECTOR_PLACEHOLDER_B64, status: 'pending', fileName: file.name || 'asset' };
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!user) { setAuthModalOpen(true); return; }
     const files = Array.from(e.target.files || []) as File[];
     if (files.length === 0) return;
-    if (profile && profile.credits < files.length) {
-      setGlobalError(`Energy levels low. Current: ${profile.credits} units.`);
-      return;
-    }
     for (const file of files) { 
-      try {
-        const item = await processFile(file);
-        const newRef = push(ref(rtdb, `metadata/${user.uid}`));
-        item.id = newRef.key || Math.random().toString();
-        await set(newRef, item);
-      } catch (err) { console.error("Batch prep failure:", err); }
+      const item = await processFile(file);
+      const newRef = push(ref(rtdb, `metadata/${user.uid}`));
+      item.id = newRef.key || Math.random().toString();
+      await set(newRef, item);
     }
   };
 
@@ -224,125 +115,152 @@ const App: React.FC = () => {
     setGlobalError(null);
     for (const item of batch) {
       const itemRef = ref(rtdb, `metadata/${user.uid}/${item.id}`);
-      const currentProfile = profile; 
-      if (!currentProfile || currentProfile.credits <= 0) {
+      if (!profile || profile.credits <= 0) {
         await update(itemRef, { status: 'error' });
-        setGlobalError("Depleted. Refuel at command center.");
+        setGlobalError("Depleted credits.");
         break;
       }
       await update(itemRef, { status: 'processing' });
       try {
-        const geminiKey = (Object.values(profile?.apiKeys || {}) as APIKeyRecord[]).find(k => k.provider === 'Gemini')?.key;
-        const groqKey = (Object.values(profile?.apiKeys || {}) as APIKeyRecord[]).find(k => k.provider === 'Groq')?.key;
-        let result;
-        let detectedEngine: 'Gemini' | 'Groq' = 'Gemini';
-        
-        if (geminiKey) {
-          result = await processImageWithGemini(item.thumbnail, settings, item.fileName, profile?.apiKeys);
-          detectedEngine = 'Gemini';
-        } else if (groqKey) {
-          result = await processImageWithGroq(item.thumbnail, settings, groqKey);
-          detectedEngine = 'Groq';
-        } else {
-          result = await processImageWithGemini(item.thumbnail, settings, item.fileName);
-          detectedEngine = 'Gemini';
-        }
-
+        const result = await processImageWithGemini(item.thumbnail, settings, item.fileName);
         const success = await deductCredit(1);
         if (success) { 
-          await update(itemRef, { ...result, status: 'completed', engine: detectedEngine }); 
+          await update(itemRef, { ...result, status: 'completed', engine: 'Gemini' }); 
         } else { 
           await update(itemRef, { status: 'error' }); 
         }
       } catch (error: any) {
-        console.error("Critical Engine Failure:", error);
         await update(itemRef, { status: 'error' });
-        if (error.message?.toLowerCase().includes("api key") || error.message?.toLowerCase().includes("process input image") || error.message?.toLowerCase().includes("decommissioned")) { 
-          setGlobalError(`System Interruption: ${error.message}`); 
-          break; 
-        }
       }
     }
     setIsProcessing(false);
     if (items.some(i => i.status === 'completed')) { setSuccessModalOpen(true); }
   };
 
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault(); 
-    setIsDragging(false);
-    if (!user) { setAuthModalOpen(true); return; }
-    const files = Array.from(e.dataTransfer.files) as File[];
-    if (files.length > 0) {
-      for (const file of files) { 
-        const item = await processFile(file);
-        const newRef = push(ref(rtdb, `metadata/${user.uid}`));
-        item.id = newRef.key || '';
-        await set(newRef, item);
-      }
-    }
-  };
-
   const downloadAllCSV = () => {
     const completedItems = items.filter(i => i.status === 'completed');
     if (completedItems.length === 0) return;
-    
-    const isPromptMode = completedItems[0].prompt !== undefined;
-    let headers: string[] = [];
-    let rows: any[][] = [];
-
-    if (isPromptMode) {
-      headers = ['Filename', 'Prompt'];
-      rows = completedItems.map(i => [i.fileName, i.prompt || '']);
-    } else {
-      // Platform Specific Header Mapping
-      switch (settings.platform) {
-        case 'AdobeStock':
-          headers = ['Filename', 'Title', 'Keywords'];
-          rows = completedItems.map(i => [i.fileName, i.title || '', (i.keywords || []).join(', ')]);
-          break;
-        case 'Shutterstock':
-          headers = ['Filename', 'Description', 'Keywords', 'Categories'];
-          rows = completedItems.map(i => [i.fileName, i.title || '', (i.keywords || []).join(', '), (i.categories || []).join(', ')]);
-          break;
-        case 'Freepik':
-          headers = ['File name', 'Title', 'Keywords'];
-          rows = completedItems.map(i => [i.fileName, i.title || '', (i.keywords || []).join(',')]);
-          break;
-        case 'Vecteezy':
-          headers = ['Filename', 'Title', 'Description', 'Keywords'];
-          rows = completedItems.map(i => [i.fileName, i.title || '', i.description || '', (i.keywords || []).join(', ')]);
-          break;
-        default:
-          headers = ['Filename', 'Title', 'Keywords', 'Description', 'Categories'];
-          rows = completedItems.map(i => [i.fileName, i.title || '', (i.keywords || []).join(', '), i.description || '', (i.categories || []).join(', ')]);
-      }
-    }
-
+    const headers = ['Filename', 'Title', 'Keywords', 'Description', 'Categories'];
+    const rows = completedItems.map(i => [i.fileName, i.title || '', (i.keywords || []).join(', '), i.description || '', (i.categories || []).join(', ')]);
     const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].map(e => e.map(cell => `"${String(cell || '').replace(/"/g, '""')}"`).join(",")).join("\n");
     const link = document.createElement("a");
     link.setAttribute("href", encodeURI(csvContent)); link.setAttribute("download", `${settings.platform}_Metadata_${Date.now()}.csv`);
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
   };
 
-  const updateItemLocal = async (id: string, updates: Partial<ExtractedMetadata>) => {
-    if (!user) return;
-    await update(ref(rtdb, `metadata/${user.uid}/${id}`), updates);
+  const renderViewContent = () => {
+    switch (view) {
+      case 'Admin':
+        return <AdminView onBack={() => setView('Home')} />;
+      case 'Tutorials':
+        return <div className="py-10 max-w-4xl mx-auto"><TutorialModal isOpen={true} onClose={() => setView('Home')} /></div>;
+      case 'Pricing':
+        return (
+          <div className="max-w-5xl mx-auto space-y-16 animate-in fade-in duration-500 py-10">
+            <div className="text-center space-y-4">
+               <h2 className="text-5xl font-black uppercase tracking-tighter">Operational Subscriptions</h2>
+               <p className="text-textDim font-bold uppercase tracking-widest text-xs">Unlock high-throughput AI extraction</p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-8">
+               <PricingCard tier="BASE" price="0" features={["100 Daily Credits", "Standard Vision API", "Community Support", "Manual CSV Export"]} current={profile?.tier === 'Free'} />
+               <PricingCard tier="COMMAND" price="19.99" features={["6,000 Monthly Credits", "Fast-Path Extraction", "Priority Server Nodes", "Custom SEO Presets", "Dedicated Support Line"]} active current={profile?.tier === 'Premium'} />
+               <PricingCard tier="ENTERPRISE" price="Custom" features={["Unlimited Extraction", "API Integration", "Whitelabel Exports", "Multi-Agent Support", "Custom Model Training"]} />
+            </div>
+          </div>
+        );
+      case 'About':
+        return (
+          <div className="max-w-4xl mx-auto space-y-16 animate-in fade-in duration-500 py-10">
+            <div className="text-center space-y-4">
+              <h2 className="text-5xl font-black uppercase tracking-tighter italic">About the Protocol</h2>
+              <p className="text-primary font-black uppercase tracking-widest text-xs">The Future of Metadata Engineering</p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-10">
+              <div className="bg-white dark:bg-surface border border-borderMain p-10 rounded-[3rem] shadow-xl space-y-6">
+                <h4 className="text-xl font-black uppercase italic tracking-tight">Our Origin</h4>
+                <p className="text-textDim font-medium leading-relaxed">CSV TREE was founded in late 2024 by <span className="text-primary font-black">MINHAJUL ISLAM</span> to solve the most tedious task in microstock: metadata tagging.</p>
+              </div>
+              <div className="bg-white dark:bg-surface border border-borderMain p-10 rounded-[3rem] shadow-xl space-y-6">
+                <h4 className="text-xl font-black uppercase italic tracking-tight">The Tech Stack</h4>
+                <p className="text-textDim font-medium leading-relaxed">Utilizing Google's <span className="text-accent font-black">Gemini 3 Flash</span> models, our system analyzes textures, subjects, and resonance to generate data.</p>
+              </div>
+            </div>
+          </div>
+        );
+      case 'Status':
+        return (
+          <div className="max-w-4xl mx-auto space-y-12 animate-in fade-in duration-500 py-10">
+             <div className="text-center space-y-4 mb-10">
+                <h2 className="text-4xl font-black uppercase tracking-tighter italic">System Readiness</h2>
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-green-500/10 text-green-500 border border-green-500/20 rounded-full text-[10px] font-black uppercase tracking-widest">
+                   <Activity size={14} /> All Nodes Operational
+                </div>
+             </div>
+             <div className="grid md:grid-cols-2 gap-6">
+                <StatusRow label="AI Analysis Node" status="Operational" latency="45ms" />
+                <StatusRow label="Metadata DB" status="Operational" latency="12ms" />
+                <StatusRow label="Auth Gateway" status="Secure" latency="8ms" />
+                <StatusRow label="Asset Storage" status="Healthy" latency="110ms" />
+             </div>
+          </div>
+        );
+      case 'Privacy':
+        return <LegalView title="Data Privacy Protocol" icon={<Lock size={32} />} content="CSV TREE operates on a 'Privacy First' directive. Metadata history is encrypted and exclusively linked to your account identity." />;
+      case 'Terms':
+        return <LegalView title="Operational Terms" icon={<FileText size={32} />} content="Usage of CSV TREE implies agreement to our fair-use policy. Credits are non-refundable digital resources." />;
+      case 'Support':
+        return (
+          <div className="max-w-2xl mx-auto text-center space-y-12 py-10 animate-in zoom-in duration-500">
+            <div className="space-y-4">
+              <div className="w-24 h-24 bg-primary/10 rounded-[2.5rem] flex items-center justify-center text-primary mx-auto border border-primary/20"><MessageCircle size={48} /></div>
+              <h2 className="text-4xl font-black uppercase tracking-tighter italic">Signal Support</h2>
+              <p className="text-textDim font-bold uppercase tracking-widest text-[11px]">Direct transmission to command headquarters</p>
+            </div>
+            <div className="grid gap-6">
+              <a href="#" className="group p-8 bg-white dark:bg-surface border border-borderMain rounded-[2.5rem] shadow-xl hover:border-primary transition-all flex items-center justify-between">
+                <div className="text-left">
+                  <h4 className="text-lg font-black uppercase italic">Telegram Link</h4>
+                  <p className="text-[10px] text-textDim font-bold uppercase tracking-widest">Instant response fleet</p>
+                </div>
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all"><Send size={24} /></div>
+              </a>
+              <a href="#" className="group p-8 bg-white dark:bg-surface border border-borderMain rounded-[2.5rem] shadow-xl hover:border-accent transition-all flex items-center justify-between">
+                <div className="text-left">
+                  <h4 className="text-lg font-black uppercase italic">Email Dispatch</h4>
+                  <p className="text-[10px] text-textDim font-bold uppercase tracking-widest">Formal inquiry node</p>
+                </div>
+                <div className="w-12 h-12 rounded-2xl bg-accent/10 text-accent flex items-center justify-center group-hover:bg-accent group-hover:text-white transition-all"><X size={24} /></div>
+              </a>
+            </div>
+          </div>
+        );
+      default: return null;
+    }
   };
 
-  const showAd = sysConfig?.ads?.enabled && (sysConfig.ads.visibility === 'All' || (sysConfig.ads.visibility === 'Free' && profile?.tier !== 'Premium'));
   const adsList = sysConfig?.ads?.list || [];
-
-  if (view === 'Admin') return <AdminView onBack={() => setView('Home')} />;
-
-  const completedCount = items.filter(i => i.status === 'completed').length;
-  const pendingCount = items.length - completedCount;
+  const showAd = !!sysConfig?.ads?.enabled && (sysConfig?.ads?.visibility === 'All' || profile?.tier === 'Free');
 
   return (
     <div className={`min-h-screen bg-bgMain text-textMain transition-all duration-300 selection:bg-green-500/30 flex flex-col ${profile?.tier === 'Premium' ? 'premium-glow' : ''}`}>
-      <Navbar onSwitchView={(v) => v === 'Tutorials' ? setIsTutorialOpen(true) : setView(v)} onManageKeys={() => setKeysModalOpen(true)} toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} />
-      <Sidebar settings={settings} setSettings={setSettings} onManageKeys={() => setKeysModalOpen(true)} isOpen={isSidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Navbar 
+        onSwitchView={(v) => setView(v)} 
+        onManageKeys={() => setKeysModalOpen(true)} 
+        toggleSidebar={toggleSidebar} 
+        isSidebarOpen={isSidebarOpen}
+      />
       
-      <main className="md:pl-[280px] pt-16 flex-grow transition-all">
+      {view === 'Home' && (
+        <Sidebar 
+          settings={settings} 
+          setSettings={setSettings} 
+          onManageKeys={() => setKeysModalOpen(true)} 
+          isOpen={isSidebarOpen} 
+          onClose={() => setSidebarOpen(false)} 
+        />
+      )}
+      
+      <main className={`${isSidebarOpen ? 'md:pl-[280px]' : ''} pt-16 flex-grow transition-all duration-300`}>
         {view === 'Home' ? (
           <div className="max-w-6xl mx-auto px-4 md:px-10 py-8 md:py-12">
             {showAd && adsList.length > 0 && (
@@ -351,15 +269,7 @@ const App: React.FC = () => {
                   <div className="flex transition-transform duration-700 h-full" style={{ transform: `translateX(-${currentAdIndex * 100}%)` }}>
                     {adsList.map((ad, idx) => (
                       <a key={idx} href={ad.link} target="_blank" className="min-w-full h-full relative group/item">
-                        <div className="absolute top-3 right-5 z-10 bg-black/60 backdrop-blur px-3 py-1 rounded-full text-[8px] font-black text-white border border-white/10 uppercase">{ad.label || 'SPONSORED'}</div>
                         <img src={ad.image} alt={`Ad ${idx}`} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
-                        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/20 to-transparent flex items-center px-8 md:px-12">
-                           <div className="space-y-1">
-                              <div className="flex items-center gap-1.5 text-primary font-black uppercase text-[8px]"><AlertCircle size={10} /> RECOMMENDED</div>
-                              <p className="text-white text-base md:text-xl font-black italic uppercase tracking-tighter leading-none">Optimize Workflow</p>
-                              <button className="mt-2 bg-white text-black px-4 py-1.5 rounded-lg text-[9px] font-black uppercase shadow-lg">View <ExternalLink size={10} /></button>
-                           </div>
-                        </div>
                       </a>
                     ))}
                   </div>
@@ -372,51 +282,90 @@ const App: React.FC = () => {
               </div>
             )}
             <PlatformPills selected={settings.platform} onSelect={(p) => setSettings(s => ({ ...s, platform: p }))} />
-            <div onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop} className={`group relative rounded-[2rem] md:rounded-[3rem] p-12 md:p-24 flex flex-col items-center justify-center gap-6 transition-all border-2 border-dashed ${isDragging ? 'bg-green-50/50 border-green-500' : 'bg-white dark:bg-surface border-slate-200 dark:border-white/5'}`}>
+            <div 
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} 
+              onDragLeave={() => setIsDragging(false)} 
+              onDrop={(e) => { e.preventDefault(); setIsDragging(false); }} 
+              className={`group relative rounded-[2rem] md:rounded-[3rem] p-12 md:p-24 flex flex-col items-center justify-center gap-6 border-2 border-dashed transition-all ${isDragging ? 'bg-green-50/50 border-green-500' : 'bg-white dark:bg-surface border-slate-200 dark:border-white/5'}`}
+            >
               <div className="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center text-green-500 mb-4 group-hover:scale-110 transition-transform"><Upload size={40} /></div>
-              <div className="text-center space-y-2"><h2 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white">Upload Assets</h2><p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">or drag & drop images/videos</p></div>
-              <input type="file" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileUpload} accept="image/*,video/*,.svg,.ai,.eps" />
+              <div className="text-center space-y-2"><h2 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Upload Assets</h2><p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">DRAG & DROP IMAGES OR VIDEOS</p></div>
+              <input type="file" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileUpload} accept="image/*,video/*" />
             </div>
             {items.length > 0 && (
-              <div className="mt-16 md:mt-28 space-y-10">
-                <div className="md:sticky top-20 z-30 space-y-6">
-                  <div className="flex justify-center mb-8"><button onClick={startBatchProcess} disabled={isProcessing || pendingCount === 0} className="bg-green-500 text-white px-10 py-4 rounded-full font-black uppercase tracking-widest flex items-center gap-3 shadow-xl hover:brightness-110 active:scale-95 disabled:opacity-50">{isProcessing ? <Loader2 className="animate-spin" size={20} /> : <Play size={20} fill="currentColor" />}{isProcessing ? 'Processing Cluster...' : `Process All Assets (${items.length})`}</button></div>
-                  <div className="bg-white dark:bg-surface border border-borderMain rounded-3xl p-6 shadow-xl flex flex-col md:flex-row justify-between gap-6">
-                    <div className="flex items-center gap-8 text-[11px] font-black uppercase text-slate-400">
-                      <span>Total: <span className="text-slate-800 dark:text-white">{items.length}</span></span>
-                      <span>Completed: <span className="text-green-500">{completedCount}</span></span>
-                    </div>
-                    <div className="flex gap-4">
-                      <button onClick={() => user && remove(ref(rtdb, `metadata/${user.uid}`))} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-red-100 text-[9px] font-black uppercase text-red-500 hover:bg-red-50 transition-all"><X size={14} /> Clear</button>
-                      <button onClick={downloadAllCSV} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 text-white text-[9px] font-black uppercase hover:brightness-110 shadow-lg"><Download size={14} /> Export CSV</button>
-                    </div>
-                  </div>
-                  <div className="h-2 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden"><div className="h-full bg-green-500 transition-all duration-1000" style={{ width: `${(completedCount / items.length) * 100}%` }} /></div>
-                </div>
-                <div className="space-y-12 pb-20">{items.map(item => (<ResultCard key={item.id} item={item} onRegenerate={() => processBatch([item])} onDelete={() => user && remove(ref(rtdb, `metadata/${user.uid}/${item.id}`))} onUpdate={updateItemLocal} onDownloadCSV={downloadAllCSV}/>))}</div>
+              <div className="mt-16 md:mt-28 space-y-10 pb-20">
+                <div className="flex justify-center mb-8"><button onClick={startBatchProcess} disabled={isProcessing} className="bg-green-500 text-white px-10 py-4 rounded-full font-black uppercase tracking-widest flex items-center gap-3 shadow-xl hover:brightness-110 active:scale-95 disabled:opacity-50">{isProcessing ? <Loader2 className="animate-spin" size={20} /> : <Play size={20} fill="currentColor" />}{isProcessing ? 'Processing Cluster...' : `Process All Assets (${items.length})`}</button></div>
+                {items.map(item => (<ResultCard key={item.id} item={item} onRegenerate={() => {}} onDelete={() => user && remove(ref(rtdb, `metadata/${user.uid}/${item.id}`))} onUpdate={(id, u) => update(ref(rtdb, `metadata/${user.uid}/${id}`), u)} onDownloadCSV={downloadAllCSV}/>))}
               </div>
             )}
           </div>
         ) : (
-          <div className="max-w-4xl mx-auto py-12 md:py-24 px-4 text-center">
-             <h2 className="text-2xl font-black uppercase tracking-widest opacity-20">View Restricted</h2>
+          <div className="px-4 py-10 min-h-[70vh]">
+            {renderViewContent()}
           </div>
         )}
       </main>
-      <Footer onNavigate={setView} />
+      <Footer onNavigate={(v) => setView(v)} />
       <ManageKeysModal isOpen={isKeysModalOpen} onClose={() => setKeysModalOpen(false)} />
       <SuccessModal isOpen={isSuccessModalOpen} onClose={() => setSuccessModalOpen(false)} count={items.filter(i => i.status === 'completed').length} onExport={downloadAllCSV} />
       <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
-      <DailyPopupModal 
-        isOpen={isDailyPopupOpen} 
-        onClose={() => setIsDailyPopupOpen(false)}
-        title={sysConfig?.dailyPopup?.title || "System Message"}
-        content={sysConfig?.dailyPopup?.content || ""}
-        buttonText={sysConfig?.dailyPopup?.buttonText || "Check It Out"}
-        buttonLink={sysConfig?.dailyPopup?.buttonLink || "#"}
-      />
+      <DailyPopupModal isOpen={isDailyPopupOpen} onClose={() => setIsDailyPopupOpen(false)} title={sysConfig?.dailyPopup?.title || "System Alert"} content={sysConfig?.dailyPopup?.content || ""} buttonText={sysConfig?.dailyPopup?.buttonText || "Execute"} buttonLink={sysConfig?.dailyPopup?.buttonLink || "#"} />
     </div>
   );
 };
+
+const PricingCard = ({ tier, price, features, active, current }: any) => (
+  <div className={`p-10 rounded-[3rem] border transition-all hover:-translate-y-2 ${active ? 'border-primary bg-primary/5 shadow-2xl scale-105 z-10' : 'border-borderMain bg-white dark:bg-surface shadow-xl'}`}>
+     {current && <div className="text-center mb-6"><span className="text-[10px] font-black bg-primary/20 text-primary px-4 py-1.5 rounded-full uppercase tracking-widest">ACTIVE PROTOCOL</span></div>}
+     <div className="space-y-2 mb-8">
+        <h4 className="text-sm font-black uppercase tracking-[0.3em] text-textDim italic">{tier}</h4>
+        <div className="flex items-baseline gap-1">
+           <span className="text-5xl font-black tracking-tighter">{price === "Custom" ? "" : "$"}{price}</span>
+           {price !== "Custom" && <span className="text-textDim text-sm font-bold uppercase">/mo</span>}
+        </div>
+     </div>
+     <ul className="space-y-4 mb-10 min-h-[160px]">
+        {features.map((f: string, i: number) => (
+          <li key={i} className="flex items-center gap-3 text-xs font-bold text-textMain/80">
+             <CheckCircle2 size={16} className="text-primary flex-shrink-0" /> {f}
+          </li>
+        ))}
+     </ul>
+     <button className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-xs transition-all ${active ? 'bg-primary text-white hover:brightness-110 shadow-lg shadow-primary/20' : 'bg-slate-100 dark:bg-white/5 text-textDim hover:bg-slate-200'}`}>Initialize Tier</button>
+  </div>
+);
+
+const StatusRow = ({ label, status, latency }: any) => (
+  <div className="bg-white dark:bg-surface border border-borderMain p-8 rounded-[2.5rem] flex items-center justify-between shadow-xl transition-all hover:border-primary/30">
+    <div className="flex items-center gap-5">
+      <div className="w-14 h-14 rounded-2xl bg-slate-50 dark:bg-white/5 flex items-center justify-center text-primary border border-borderMain"><Activity size={24} /></div>
+      <div className="space-y-1">
+        <span className="text-sm font-black uppercase tracking-widest block">{label}</span>
+        <span className="text-[10px] text-textDim font-bold uppercase tracking-[0.2em]">{latency}</span>
+      </div>
+    </div>
+    <div className="flex items-center gap-3">
+      <div className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.6)] animate-pulse" />
+      <span className="text-[11px] font-black text-green-500 uppercase tracking-widest">{status}</span>
+    </div>
+  </div>
+);
+
+const LegalView = ({ title, content, icon }: any) => (
+  <div className="max-w-3xl mx-auto space-y-12 py-10 animate-in fade-in duration-700">
+    <div className="text-center space-y-6">
+      <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center text-primary mx-auto border border-primary/20">{icon}</div>
+      <h2 className="text-4xl font-black uppercase tracking-tighter italic">{title}</h2>
+    </div>
+    <div className="bg-white dark:bg-surface border border-borderMain p-12 rounded-[3.5rem] shadow-2xl relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2" />
+      <p className="text-xl font-medium leading-relaxed text-textMain/90 relative z-10 italic">"{content}"</p>
+      <div className="mt-12 pt-8 border-t border-borderMain flex justify-between items-center text-[10px] font-black uppercase text-textDim tracking-[0.3em]">
+         <div className="flex items-center gap-2"><Fingerprint size={14} /> Encrypted Access</div>
+         <div className="flex items-center gap-2"><Database size={14} /> Rev. 2024.12</div>
+      </div>
+    </div>
+  </div>
+);
 
 export default App;

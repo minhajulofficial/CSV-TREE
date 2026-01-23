@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   LogOut, User as UserIcon, Loader2, 
   Sun, Moon, Crown, RefreshCw, Sparkles, Shield,
-  Settings, Code, ExternalLink, Github, Globe, Menu, X, PlayCircle, Bell, Info, AlertTriangle, CheckCircle2
+  Settings, X, PlayCircle, PanelLeftClose, PanelLeftOpen, RotateCw, Code, Github, Globe, Bell, Info, AlertTriangle, CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -10,21 +10,21 @@ import { AppView, SystemConfig, NotificationEntry } from '../types';
 import AuthModal from './AuthModal';
 import { rtdb, ref, onValue } from '../services/firebase';
 
-const ADMIN_EMAILS = ["minhajulofficial.bd@gmail.com"];
-
 interface NavbarProps {
   onSwitchView: (view: AppView) => void;
   onManageKeys: () => void;
-  toggleSidebar?: () => void;
+  toggleSidebar: () => void;
+  isSidebarOpen: boolean;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onSwitchView, onManageKeys, toggleSidebar }) => {
+const Navbar: React.FC<NavbarProps> = ({ onSwitchView, onManageKeys, toggleSidebar, isSidebarOpen }) => {
   const { user, profile, logout, loading, profileLoading, setAuthModalOpen, resetUserCredits } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isDevOpen, setIsDevOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [config, setConfig] = useState<SystemConfig | null>(null);
+  
   const dropdownRef = useRef<HTMLDivElement>(null);
   const devRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -39,55 +39,72 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchView, onManageKeys, toggleSideb
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsProfileOpen(false);
-      if (devRef.current && !devRef.current.contains(event.target as Node)) setIsDevOpen(false);
-      if (notifRef.current && !notifRef.current.contains(event.target as Node)) setIsNotifOpen(false);
+      const target = event.target as Node;
+      if (dropdownRef.current && !dropdownRef.current.contains(target)) setIsProfileOpen(false);
+      if (devRef.current && !devRef.current.contains(target)) setIsDevOpen(false);
+      if (notifRef.current && !notifRef.current.contains(target)) setIsNotifOpen(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const isAdmin = user && ADMIN_EMAILS.includes(user.email || '');
   const isPremium = profile?.tier === 'Premium';
+  const isAdmin = user && user.email === "minhajulofficial.bd@gmail.com";
   const notifications = config?.notifications?.list || [];
 
   return (
     <>
       <nav className="fixed top-0 left-0 right-0 h-16 bg-white/80 dark:bg-bgMain/80 backdrop-blur-2xl border-b border-borderMain flex items-center justify-between px-4 md:px-10 z-[60] transition-colors">
-        <div className="flex items-center gap-4 md:gap-10">
-          <button onClick={toggleSidebar} className="md:hidden p-2 text-textDim hover:text-primary transition-colors">
-            <Menu size={20} />
-          </button>
+        <div className="flex items-center gap-4">
+          {/* Site Name / Logo */}
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => onSwitchView('Home')}>
             <div className="flex items-center gap-1 text-xl md:text-2xl font-black tracking-tighter group">
               <span className="text-primary transition-all">CSV</span>
               <span className="text-accent">TREE</span>
             </div>
             {user && (
-              <span className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-full border shadow-sm ${isPremium ? 'bg-primary/10 border-primary text-primary' : 'bg-slate-100 dark:bg-white/5 border-borderMain text-textDim'}`}>
+              <span className={`hidden sm:inline-block text-[9px] font-black uppercase px-2.5 py-1 rounded-full border shadow-sm ${isPremium ? 'bg-primary/10 border-primary text-primary' : 'bg-slate-100 dark:bg-white/5 border-borderMain text-textDim'}`}>
                 {isPremium ? 'PREMIUM' : 'FREE'}
               </span>
             )}
           </div>
+
+          {/* Control Icons next to Logo (The '3-line' menu is removed as requested) */}
+          <div className="flex items-center gap-2">
+             <button 
+                onClick={toggleSidebar} 
+                className="p-2 text-textDim hover:text-primary bg-white dark:bg-white/5 rounded-xl border border-borderMain transition-all active:scale-95 shadow-sm"
+                title={isSidebarOpen ? "Hide Panel" : "Show Panel"}
+             >
+               {isSidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+             </button>
+             <button 
+                onClick={resetUserCredits} 
+                className="p-2 text-textDim hover:text-primary bg-white dark:bg-white/5 rounded-xl border border-borderMain transition-all active:scale-95 shadow-sm"
+                title="Refresh Credits"
+             >
+               <RotateCw size={18} className={profileLoading ? "animate-spin" : ""} />
+             </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-1 md:gap-3">
+        <div className="flex items-center gap-3">
           {/* Notifications Bell */}
           <div className="relative" ref={notifRef}>
             <button 
               onClick={() => setIsNotifOpen(!isNotifOpen)}
               className={`p-2.5 rounded-xl transition-all relative ${isNotifOpen ? 'bg-primary/10 text-primary' : 'text-textDim hover:text-primary hover:bg-primary/5'}`}
-              title="Notifications"
+              title="Global Notifications"
             >
               <Bell size={20} />
               {notifications.length > 0 && (
-                <span className="absolute top-2 right-2 w-2 h-2 bg-accent rounded-full border-2 border-white dark:border-bgMain" />
+                <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-accent rounded-full border-2 border-white dark:border-bgMain" />
               )}
             </button>
             
             {isNotifOpen && (
               <div className="absolute top-full right-0 mt-4 w-72 md:w-80 bg-white dark:bg-surface border border-borderMain rounded-[2rem] shadow-2xl p-6 animate-in zoom-in-95 duration-200 z-[100]">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-textDim mb-4 px-2">Global Comms</h4>
+                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-textDim mb-4 px-2">Global Transmissions</h4>
                 <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 no-scrollbar">
                   {notifications.length > 0 ? notifications.map((notif: NotificationEntry) => (
                     <div key={notif.id} className={`p-4 rounded-2xl border flex gap-3 ${notif.type === 'warning' ? 'bg-amber-500/5 border-amber-500/10 text-amber-600' : notif.type === 'success' ? 'bg-green-500/5 border-green-500/10 text-green-600' : 'bg-primary/5 border-primary/10 text-primary'}`}>
@@ -97,7 +114,7 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchView, onManageKeys, toggleSideb
                   )) : (
                     <div className="py-8 text-center space-y-2 opacity-30">
                       <Bell size={24} className="mx-auto" />
-                      <p className="text-[9px] font-black uppercase tracking-widest">No New Alerts</p>
+                      <p className="text-[9px] font-black uppercase tracking-widest">Clear Signal</p>
                     </div>
                   )}
                 </div>
@@ -105,6 +122,7 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchView, onManageKeys, toggleSideb
             )}
           </div>
 
+          {/* Developer Icon Profile */}
           <div className="relative" ref={devRef}>
             <button 
               onClick={() => setIsDevOpen(!isDevOpen)}
@@ -122,8 +140,8 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchView, onManageKeys, toggleSideb
                       <img src={config.developer?.avatar || "https://via.placeholder.com/150"} alt="Dev" className="w-full h-full object-cover rounded-[1.75rem]" />
                     </div>
                     <div className="space-y-1">
-                      <h4 className="text-sm font-black text-textMain uppercase tracking-widest">{config.developer?.name || "The Architect"}</h4>
-                      <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em]">{config.developer?.role || "Engineering Lead"}</p>
+                      <h4 className="text-sm font-black text-textMain uppercase tracking-widest">{config.developer?.name || "Minhajul BD"}</h4>
+                      <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em]">{config.developer?.role || "Lead Architect"}</p>
                     </div>
                     <p className="text-[11px] text-textDim font-bold leading-relaxed italic opacity-80">
                       {config.developer?.bio || "Architecting digital solutions for the next generation of contributors."}
@@ -140,22 +158,24 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchView, onManageKeys, toggleSideb
                 ) : (
                   <div className="flex flex-col items-center justify-center py-12 gap-4">
                     <Loader2 size={32} className="animate-spin text-primary opacity-30" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-textDim animate-pulse">Syncing Dev Intel...</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-textDim animate-pulse">Syncing Dev...</span>
                   </div>
                 )}
               </div>
             )}
           </div>
 
+          {/* Tutorial Icon */}
           <button 
             onClick={() => onSwitchView('Tutorials')}
-            className="p-2.5 rounded-xl text-textDim hover:text-primary hover:bg-primary/5 transition-all" 
-            title="Mastery Guide"
+            className="group relative p-2.5 rounded-xl text-primary bg-primary/10 hover:bg-primary hover:text-white transition-all animate-pulse-subtle ring-4 ring-primary/5" 
+            title="Extraction Tutorial"
           >
-            <PlayCircle size={20} />
+            <PlayCircle size={20} className="relative z-10" />
+            <span className="absolute inset-0 rounded-xl bg-primary/20 animate-ping opacity-30" />
           </button>
 
-          <button onClick={onManageKeys} className="hidden md:flex p-2.5 rounded-xl text-textDim hover:text-primary hover:bg-primary/5 transition-all" title="Manage API Keys">
+          <button onClick={onManageKeys} className="hidden md:flex p-2.5 rounded-xl text-textDim hover:text-primary hover:bg-primary/5 transition-all" title="Manage Keys">
             <Settings size={20} />
           </button>
 
@@ -204,7 +224,6 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchView, onManageKeys, toggleSideb
                     <div className="space-y-4">
                        <div className="flex justify-between items-center text-[9px] font-black uppercase text-textDim tracking-widest">
                           <span>Account Balance</span>
-                          <button onClick={resetUserCredits} className="text-primary hover:underline flex items-center gap-1"><RefreshCw size={10} /> Sync</button>
                        </div>
                        <div className="h-1.5 bg-bgMain rounded-full overflow-hidden">
                           <div className={`h-full transition-all duration-1000 ${isPremium ? 'bg-primary shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-slate-400'}`} style={{ width: `${((profile?.credits || 0) / (profile?.maxCredits || 100)) * 100}%` }} />
@@ -223,16 +242,8 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchView, onManageKeys, toggleSideb
                       </button>
                     )}
                     <button onClick={toggleTheme} className="md:hidden w-full py-4 px-6 rounded-2xl bg-slate-50 dark:bg-white/5 border border-borderMain text-textDim hover:text-primary transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-3">
-                       {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />} Switch Theme
+                       {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />} Theme
                     </button>
-                    
-                    <div className={`p-4 rounded-2xl border flex items-start gap-3 ${isPremium ? 'bg-primary/5 border-primary/10' : 'bg-bgMain/50 border-borderMain'}`}>
-                       <Sparkles size={14} className="text-primary mt-0.5" />
-                       <div className="space-y-1">
-                          <p className="text-[10px] font-black text-primary uppercase tracking-widest">Platform Status</p>
-                          <p className="text-[9px] text-textDim font-bold leading-relaxed italic uppercase">Nodes provisioned & secure.</p>
-                       </div>
-                    </div>
                   </div>
 
                   <button onClick={logout} className="w-full py-5 border-t border-borderMain text-textDim hover:text-accent hover:bg-accent/5 transition-all text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2">
@@ -248,6 +259,17 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchView, onManageKeys, toggleSideb
           )}
         </div>
       </nav>
+
+      <style>{`
+        @keyframes pulse-subtle {
+          0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+          50% { transform: scale(1.05); box-shadow: 0 0 15px 5px rgba(34, 197, 94, 0.2); }
+        }
+        .animate-pulse-subtle {
+          animation: pulse-subtle 2s infinite ease-in-out;
+        }
+      `}</style>
+
       <AuthModal />
     </>
   );

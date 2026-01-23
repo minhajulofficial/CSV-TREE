@@ -40,15 +40,8 @@ export const processImageWithGemini = async (imageBase64: string, settings: AppS
     const base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
     const mimeType = "image/jpeg";
 
-    let targetKey = process.env.API_KEY;
-    if (customKeys) {
-      const userKey = Object.values(customKeys).find(k => k.provider === 'Gemini');
-      if (userKey && userKey.key) targetKey = userKey.key;
-    }
-
-    if (!targetKey) throw new Error("No Gemini API key available.");
-
-    const ai = new GoogleGenAI({ apiKey: targetKey });
+    /* Always use process.env.API_KEY for initializing GoogleGenAI as per guidelines */
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     let promptText = "";
     let schema: any = {};
@@ -90,15 +83,12 @@ export const processImageWithGemini = async (imageBase64: string, settings: AppS
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: promptText },
-            { inlineData: { mimeType: mimeType, data: base64Data } }
-          ]
-        }
-      ],
+      contents: {
+        parts: [
+          { text: promptText },
+          { inlineData: { mimeType: mimeType, data: base64Data } }
+        ]
+      },
       config: {
         responseMimeType: "application/json",
         responseSchema: schema,
@@ -106,6 +96,7 @@ export const processImageWithGemini = async (imageBase64: string, settings: AppS
       }
     });
 
+    /* Accessing the .text property directly instead of calling it as a function */
     return parseAIResponse(response.text);
   } catch (error: any) {
     console.error("Gemini Core Error:", error);

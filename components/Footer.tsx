@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Facebook, Twitter, Instagram, Youtube, Heart } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Youtube } from 'lucide-react';
 import { AppView, SystemConfig } from '../types';
 import { rtdb, ref, onValue } from '../services/firebase';
 
@@ -23,9 +22,9 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   };
 
   return (
-    <footer className="bg-bgSidebar border-t border-borderMain pt-20 pb-10 px-6 md:px-10 md:ml-[280px] transition-all">
+    <footer className="bg-bgSidebar border-t border-borderMain pt-20 pb-10 px-6 md:px-10 transition-all">
       <div className="max-w-6xl mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 md:gap-12 mb-16">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-10 md:gap-12 mb-16">
           <div className="col-span-2 md:col-span-1 space-y-6">
             <div className="flex items-center gap-1 text-2xl font-black tracking-tighter cursor-pointer" onClick={() => onNavigate('Home')}>
               <span className="text-primary">CSV</span>
@@ -43,29 +42,20 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           </div>
 
           <div className="space-y-6">
-            <h4 className="text-textMain text-xs font-black uppercase tracking-[0.2em]">Tools</h4>
-            <ul className="space-y-4 text-sm font-bold text-textDim">
-              <li><FooterLink label="Vision Hub" onClick={() => onNavigate('Home')} /></li>
-              <li><FooterLink label="Prompt Engine" onClick={() => onNavigate('Home')} /></li>
-              <li><FooterLink label="Tutorials" onClick={() => onNavigate('Tutorials')} /></li>
-            </ul>
-          </div>
-
-          <div className="space-y-6">
-            <h4 className="text-textMain text-xs font-black uppercase tracking-[0.2em]">Company</h4>
+            <h4 className="text-textMain text-xs font-black uppercase tracking-[0.2em]">Platform</h4>
             <ul className="space-y-4 text-sm font-bold text-textDim">
               <li><FooterLink label="About Us" onClick={() => onNavigate('About')} /></li>
-              <li><FooterLink label="Pricing" onClick={() => onNavigate('Pricing')} /></li>
-              <li><FooterLink label="System Status" onClick={() => onNavigate('Status')} /></li>
+              <li><FooterLink label="Pricing Model" onClick={() => onNavigate('Pricing')} /></li>
+              <li><FooterLink label="System Health" onClick={() => onNavigate('Status')} /></li>
             </ul>
           </div>
 
           <div className="space-y-6">
-            <h4 className="text-textMain text-xs font-black uppercase tracking-[0.2em]">Legal</h4>
+            <h4 className="text-textMain text-xs font-black uppercase tracking-[0.2em]">Regulatory</h4>
             <ul className="space-y-4 text-sm font-bold text-textDim">
-              <li><FooterLink label="Privacy Policy" onClick={() => onNavigate('Privacy')} /></li>
-              <li><FooterLink label="Terms of Service" onClick={() => onNavigate('Terms')} /></li>
-              <li><FooterLink label="Technical Support" onClick={() => onNavigate('Support')} /></li>
+              <li><FooterLink label="Privacy Protocol" onClick={() => onNavigate('Privacy')} /></li>
+              <li><FooterLink label="Usage Terms" onClick={() => onNavigate('Terms')} /></li>
+              <li><FooterLink label="Command Support" onClick={() => onNavigate('Support')} /></li>
             </ul>
           </div>
         </div>
