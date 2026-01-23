@@ -13,6 +13,7 @@ import {
   increment,
   doc,
   setDoc,
+  getDoc,
   updateDoc,
   onSnapshot,
   type User 
@@ -47,6 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
 
+  // Sync Auth State and Firestore Profile
   useEffect(() => {
     let unsubscribeProfile: (() => void) | null = null;
 
@@ -57,34 +59,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProfileLoading(true);
         const userDocRef = doc(db, 'users', currentUser.uid);
         
+        // Ensure user exists in Firestore
+        const snapshot = await getDoc(userDocRef);
+        if (!snapshot.exists()) {
+          const initialData: UserProfile = {
+            credits: 100,
+            maxCredits: 100,
+            tier: 'Free',
+            email: currentUser.email || '',
+            displayName: currentUser.displayName || 'Unknown Operator',
+            lastResetDate: new Date().toISOString()
+          };
+          await setDoc(userDocRef, initialData);
+        } else {
+          // Update basic info if needed
+          await updateDoc(userDocRef, {
+            email: currentUser.email || snapshot.data().email,
+            displayName: currentUser.displayName || snapshot.data().displayName
+          });
+        }
+
         if (unsubscribeProfile) unsubscribeProfile();
         
-        unsubscribeProfile = onSnapshot(userDocRef, (snapshot) => {
-          if (snapshot.exists()) {
-            setProfile(snapshot.data() as UserProfile);
-            setProfileLoading(false);
-          } else {
-            // New user initialization logic
-            const initialSetup: UserProfile = {
-              credits: 100,
-              maxCredits: 100,
-              tier: 'Free',
-              email: currentUser.email || '',
-              displayName: currentUser.displayName || 'Contributor',
-              lastResetDate: new Date().toISOString()
-            };
-            setDoc(userDocRef, initialSetup, { merge: true })
-              .then(() => {
-                setProfile(initialSetup);
-                setProfileLoading(false);
-              })
-              .catch((err) => {
-                console.error("Firestore Init Error:", err);
-                setProfileLoading(false);
-              });
+        unsubscribeProfile = onSnapshot(userDocRef, (snap) => {
+          if (snap.exists()) {
+            setProfile(snap.data() as UserProfile);
           }
-        }, (err) => {
-          console.error("Profile sync error:", err);
           setProfileLoading(false);
         });
       } else {
@@ -120,7 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         maxCredits: amount,
         lastResetDate: new Date().toISOString() 
       });
-    } catch (err) { setError("Sync failed."); }
+    } catch (err) { setError("Manual sync failed."); }
   };
 
   const loginWithGoogle = async () => {
@@ -129,9 +129,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await signInWithPopup(auth, googleProvider); 
     } 
     catch (err: any) { 
-      console.error("Google Auth Error:", err);
       if (err.code !== 'auth/popup-closed-by-user') {
         setError(err.message);
+        throw err;
       }
     }
   };
@@ -139,7 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithEmail = async (email: string, pass: string) => {
     setError(null);
     try { await signInWithEmailAndPassword(auth, email, pass); } 
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setError(err.message); throw err; }
   };
 
   const registerWithEmail = async (email: string, pass: string, name: string) => {
@@ -147,13 +147,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await createUserWithEmailAndPassword(auth, email, pass);
       await fbUpdateProfile(res.user, { displayName: name });
-    } catch (err: any) { setError(err.message); }
+      // Firestore initialization is handled by useEffect
+    } catch (err: any) { setError(err.message); throw err; }
   };
 
   const resetPassword = async (email: string) => {
     setError(null);
     try { await sendPasswordResetEmail(auth, email); } 
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setError(err.message); throw err; }
   };
 
   const logout = async () => {
@@ -172,6 +173,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) throw new Error('useAuth error');
+  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };

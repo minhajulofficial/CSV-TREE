@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CSV TREE Pro - AI Metadata Vision</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌳</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -39,12 +40,12 @@
   </script>
   <style>
     :root {
-      --bg-main: #f1f5f9;
+      --bg-main: #f8fafc;
       --bg-sidebar: #ffffff;
       --surface: #ffffff;
-      --border-main: rgba(0, 0, 0, 0.08);
+      --border-main: rgba(0, 0, 0, 0.06);
       --text-main: #0f172a;
-      --text-dim: #475569;
+      --text-dim: #64748b;
     }
     
     html.dark {
@@ -64,42 +65,21 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    ::-webkit-scrollbar-thumb:hover { background: #2563eb; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #2563eb; border-radius: 10px; }
 
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .fade-up { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-
-    input[type='range'] { -webkit-appearance: none; background: transparent; }
-    input[type='range']::-webkit-slider-runnable-track { height: 4px; background: var(--border-main); border-radius: 2px; }
-    input[type='range']::-webkit-slider-thumb {
-      height: 18px; width: 18px; border-radius: 50%; background: #2563eb;
-      cursor: pointer; -webkit-appearance: none; margin-top: -7px;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); border: 2px solid white;
-    }
-
-    .platform-pill-active {
-      background-color: #2563eb;
-      color: #fff;
-      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.2);
-      transform: scale(1.02);
-      border-color: transparent !important;
+    .glass-effect {
+      backdrop-filter: blur(12px);
+      background: rgba(var(--bg-sidebar), 0.8);
     }
   </style>
   <script type="importmap">
 {
   "imports": {
     "@google/genai": "https://esm.sh/@google/genai@1.38.0",
-    "firebase/app": "https://esm.sh/firebase@12.8.0/app",
-    "firebase/auth": "https://esm.sh/firebase@12.8.0/auth",
-    "firebase/firestore": "https://esm.sh/firebase@12.8.0/firestore",
+    "firebase/app": "https://esm.sh/firebase@11.2.0/app",
+    "firebase/auth": "https://esm.sh/firebase@11.2.0/auth",
+    "firebase/firestore": "https://esm.sh/firebase@11.2.0/firestore",
     "react": "https://esm.sh/react@19.0.0",
     "react-dom": "https://esm.sh/react-dom@19.0.0",
     "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",

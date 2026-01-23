@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, ChevronRight, X, Layers, Cpu } from 'lucide-react';
+import { Upload, Download, ChevronRight, X, Layers, Cpu, Sparkles } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
@@ -32,6 +31,7 @@ const App: React.FC = () => {
     localStorage.setItem('csv-tree-settings', JSON.stringify(settings));
   }, [settings]);
 
+  // View Switcher for Admin Panel
   if (view === 'Admin') {
     return <AdminView onBack={() => setView('Home')} />;
   }
@@ -60,7 +60,7 @@ const App: React.FC = () => {
     if (files.length === 0) return;
     
     if (profile && profile.credits < files.length) {
-      alert(`Insufficient credits for ${files.length} images.`);
+      alert(`Insufficient energy units. Required: ${files.length}, Available: ${profile.credits}`);
       return;
     }
 
@@ -96,7 +96,7 @@ const App: React.FC = () => {
           break;
         }
       } catch (error: any) {
-        console.error("Batch error:", error);
+        console.error("Critical Engine Failure:", error);
         setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'error' } : i));
       }
     }
@@ -137,7 +137,7 @@ const App: React.FC = () => {
       <Navbar onSwitchView={setView} />
       <Sidebar settings={settings} setSettings={setSettings} />
       
-      <main className="pl-[260px] pt-16 flex-grow transition-all">
+      <main className="pl-[280px] pt-16 flex-grow transition-all">
         <div className="max-w-6xl mx-auto px-10 py-16">
           <PlatformPills selected={settings.platform} onSelect={(p) => setSettings(s => ({ ...s, platform: p }))} />
           
@@ -147,21 +147,21 @@ const App: React.FC = () => {
             onDrop={handleDrop} 
             className={`group relative rounded-[3rem] p-24 flex flex-col items-center justify-center gap-14 transition-all duration-700 ${isDragging ? 'bg-primary/10 border-primary/50 scale-[1.02]' : 'bg-surface border-white/5 shadow-2xl'} border-2 border-dashed overflow-hidden`}
           >
-            <div className="absolute -top-48 -right-48 w-96 h-96 bg-primary/10 blur-[150px] rounded-full" />
-            <div className="absolute -bottom-48 -left-48 w-96 h-96 bg-accent/10 blur-[150px] rounded-full" />
+            <div className="absolute -top-48 -right-48 w-96 h-96 bg-primary/10 blur-[150px] rounded-full opacity-30" />
+            <div className="absolute -bottom-48 -left-48 w-96 h-96 bg-accent/10 blur-[150px] rounded-full opacity-30" />
             
-            <div className={`w-32 h-32 rounded-[3rem] flex items-center justify-center transition-all duration-500 glass-panel shadow-2xl relative z-10 border-white/10 ${isDragging ? 'bg-primary text-[#0a0c10] scale-110 -rotate-12' : 'text-primary group-hover:scale-110 group-hover:rotate-6'}`}>
+            <div className={`w-36 h-36 rounded-[3rem] flex items-center justify-center transition-all duration-500 glass-panel shadow-2xl relative z-10 border-white/10 ${isDragging ? 'bg-primary text-white scale-110 -rotate-12' : 'text-primary group-hover:scale-110 group-hover:rotate-6 bg-primary/5'}`}>
               <Upload size={54} strokeWidth={1.5} />
             </div>
 
             <div className="text-center space-y-10 relative z-10">
               <div className="space-y-4">
                 <div className="flex items-center justify-center gap-2 mb-2">
-                   <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] flex items-center gap-2 ${settings.engine === 'Groq' ? 'bg-accent/10 text-accent border border-accent/20' : 'bg-primary/10 text-primary border border-primary/20'}`}>
-                      <Cpu size={12} /> Powered by {settings.engine}
+                   <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all ${settings.engine === 'Groq' ? 'bg-accent/10 text-accent border border-accent/20' : 'bg-primary/10 text-primary border border-primary/20'}`}>
+                      <Sparkles size={12} className="animate-pulse" /> AI {settings.engine} Processor
                    </div>
                 </div>
-                <h1 className="text-6xl font-black tracking-tight text-textMain drop-shadow-2xl uppercase">
+                <h1 className="text-7xl font-black tracking-tighter text-textMain drop-shadow-2xl uppercase italic">
                    {settings.mode === 'Metadata' ? 'Metadata Vision' : 'Prompt Engineer'}
                 </h1>
               </div>
@@ -171,7 +171,7 @@ const App: React.FC = () => {
                   <button 
                     key={type} 
                     onClick={() => setSettings(s => ({ ...s, fileType: type }))} 
-                    className={`px-12 py-3.5 rounded-2xl text-[10px] font-black transition-all border-2 uppercase tracking-[0.3em] active:scale-95 ${settings.fileType === type ? `bg-primary text-[#0a0c10] border-transparent shadow-2xl scale-110` : 'border-borderMain bg-white dark:bg-bgSidebar text-textDim hover:text-primary hover:border-primary/20'}`}
+                    className={`px-12 py-4 rounded-2xl text-[10px] font-black transition-all border-2 uppercase tracking-[0.3em] active:scale-95 ${settings.fileType === type ? `bg-primary text-white border-transparent shadow-2xl scale-110` : 'border-borderMain bg-white dark:bg-bgSidebar text-textDim hover:text-primary hover:border-primary/20'}`}
                   >
                     {type}
                   </button>
@@ -179,9 +179,9 @@ const App: React.FC = () => {
               </div>
 
               <div className="pt-4">
-                <label className={`group/btn relative px-14 py-5 rounded-2xl font-black cursor-pointer transition-all duration-500 shadow-xl inline-flex items-center gap-5 overflow-hidden bg-primary text-[#0a0c10] shadow-primary/20 hover:shadow-primary/40 hover:scale-105 active:scale-95`}>
-                  <span className="relative z-10 tracking-[0.2em] uppercase text-xs">
-                    Start Batching
+                <label className={`group/btn relative px-16 py-6 rounded-2xl font-black cursor-pointer transition-all duration-500 shadow-xl inline-flex items-center gap-5 overflow-hidden bg-primary text-white shadow-primary/20 hover:shadow-primary/40 hover:scale-105 active:scale-95`}>
+                  <span className="relative z-10 tracking-[0.3em] uppercase text-xs">
+                    Initialize Batch
                   </span>
                   <ChevronRight size={20} strokeWidth={4} className="relative z-10 group-hover/btn:translate-x-1.5 transition-transform" />
                   <input type="file" multiple className="hidden" onChange={handleFileUpload} accept="image/*" />
@@ -194,19 +194,19 @@ const App: React.FC = () => {
             <div className="mt-28 space-y-16 animate-in fade-in duration-1000">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-10 border-b border-borderMain pb-12">
                 <div className="space-y-3">
-                   <h2 className="text-4xl font-black tracking-tight text-textMain">Analysis Hub</h2>
+                   <h2 className="text-4xl font-black italic tracking-tighter text-textMain uppercase">Production Queue</h2>
                    <div className="flex items-center gap-3 text-textDim text-[10px] font-black uppercase tracking-widest opacity-60">
                      <Layers size={14} className="text-primary" /> 
-                     <span>{items.filter(i => i.status === 'completed').length} / {items.length} Files</span>
+                     <span>Processed {items.filter(i => i.status === 'completed').length} / {items.length} Modules</span>
                    </div>
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-6 bg-surface p-4 rounded-3xl border border-borderMain backdrop-blur-3xl shadow-2xl">
-                   <button onClick={downloadAllCSV} className="flex items-center gap-3 text-[10px] font-black text-[#0a0c10] bg-primary px-8 py-4 rounded-xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-[0.2em] shadow-xl shadow-primary/20">
-                      <Download size={18} strokeWidth={3} /> Export Batch
+                   <button onClick={downloadAllCSV} className="flex items-center gap-3 text-[10px] font-black text-white bg-primary px-10 py-4 rounded-xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-[0.2em] shadow-xl shadow-primary/20">
+                      <Download size={18} strokeWidth={3} /> Bulk Export
                    </button>
-                   <button onClick={() => confirm('Clear history?') && setItems([])} className="flex items-center gap-3 text-[10px] font-black text-textMain bg-bgMain border border-borderMain px-8 py-4 rounded-xl hover:bg-red-500/10 hover:border-red-500/30 active:scale-95 transition-all uppercase tracking-[0.2em]">
-                      <X size={18} strokeWidth={3} /> Wipe
+                   <button onClick={() => confirm('Purge current session logs?') && setItems([])} className="flex items-center gap-3 text-[10px] font-black text-textMain bg-bgMain border border-borderMain px-8 py-4 rounded-xl hover:bg-red-500/10 hover:border-red-500/30 active:scale-95 transition-all uppercase tracking-[0.2em]">
+                      <X size={18} strokeWidth={3} /> Clear
                    </button>
                 </div>
               </div>
