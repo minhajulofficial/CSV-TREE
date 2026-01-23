@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { 
   db, 
@@ -9,7 +8,7 @@ import {
   query, 
   orderBy 
 } from "../services/firebase";
-import { Users, Shield, CreditCard, Search, ArrowLeft, Zap, Star } from 'lucide-react';
+import { Users, Shield, CreditCard, Search, ArrowLeft, Zap, Star, Loader2 } from 'lucide-react';
 
 interface AdminViewProps {
   onBack: () => void;
@@ -18,34 +17,54 @@ interface AdminViewProps {
 const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const q = query(collection(db, 'users'), orderBy('tier', 'desc'));
     const unsubscribe = onSnapshot(q, (snap) => {
       setAllUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    }, (err) => {
+      console.error("Admin view sync error:", err);
+      setLoading(false);
     });
     return unsubscribe;
   }, []);
 
   const adjustCredits = async (id: string, current: number, amount: number) => {
-    await updateDoc(doc(db, 'users', id), { 
-      credits: (current || 0) + amount,
-      maxCredits: Math.max((current || 0) + amount, 100)
-    });
+    try {
+      await updateDoc(doc(db, 'users', id), { 
+        credits: (current || 0) + amount,
+        maxCredits: Math.max((current || 0) + amount, 100)
+      });
+    } catch (err) {
+      console.error("Credit update failed:", err);
+    }
   };
 
   const toggleTier = async (id: string, current: string) => {
-    const newTier = current === 'Premium' ? 'Free' : 'Premium';
-    await updateDoc(doc(db, 'users', id), { 
-      tier: newTier,
-      credits: newTier === 'Premium' ? 6000 : 100,
-      maxCredits: newTier === 'Premium' ? 6000 : 100
-    });
+    try {
+      const newTier = current === 'Premium' ? 'Free' : 'Premium';
+      await updateDoc(doc(db, 'users', id), { 
+        tier: newTier,
+        credits: newTier === 'Premium' ? 6000 : 100,
+        maxCredits: newTier === 'Premium' ? 6000 : 100
+      });
+    } catch (err) {
+      console.error("Tier update failed:", err);
+    }
   };
 
   const filteredUsers = allUsers.filter(u => 
     u.email?.toLowerCase().includes(search.toLowerCase()) || 
     u.displayName?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  if (loading) return (
+    <div className="min-h-screen bg-bgMain flex flex-col items-center justify-center gap-4">
+      <Loader2 className="animate-spin text-primary" size={48} />
+      <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Fetching Command Logs...</p>
+    </div>
   );
 
   return (
@@ -56,7 +75,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
             <button onClick={onBack} className="flex items-center gap-2 text-primary text-[10px] font-black uppercase tracking-widest hover:gap-3 transition-all">
               <ArrowLeft size={14} /> Back to Terminal
             </button>
-            <h1 className="text-5xl font-black italic tracking-tighter uppercase text-textMain">Admin Command Center</h1>
+            <h1 className="text-5xl font-black italic tracking-tighter uppercase text-textMain">Command Center</h1>
             <p className="text-textDim text-[10px] font-bold uppercase tracking-[0.4em]">Infrastructure Management</p>
           </div>
           
@@ -64,7 +83,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
             <Search className="text-textDim ml-3 mt-2.5" size={18} />
             <input 
               type="text" 
-              placeholder="Filter by operator name or email..." 
+              placeholder="Filter operators..." 
               className="bg-transparent border-none focus:outline-none px-4 py-2 text-xs font-bold text-textMain w-full"
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -89,12 +108,12 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-borderMain">
-                {filteredUsers.map(u => (
+                {filteredUsers.length > 0 ? filteredUsers.map(u => (
                   <tr key={u.id} className="hover:bg-primary/5 transition-colors group">
                     <td className="px-10 py-8">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center font-black text-primary text-xl shadow-inner">
-                          {u.displayName?.[0] || 'O'}
+                        <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center font-black text-primary text-xl shadow-inner overflow-hidden">
+                          {u.photoURL ? <img src={u.photoURL} className="w-full h-full object-cover" /> : u.displayName?.[0] || 'O'}
                         </div>
                         <div>
                           <p className="text-xs font-black uppercase tracking-tight text-textMain">{u.displayName || 'Unknown Unit'}</p>
@@ -122,7 +141,11 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
                       </button>
                     </td>
                   </tr>
-                ))}
+                )) : (
+                  <tr>
+                    <td colSpan={4} className="px-10 py-20 text-center text-textDim text-[10px] font-black uppercase tracking-[0.4em]">No matching operator logs found</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

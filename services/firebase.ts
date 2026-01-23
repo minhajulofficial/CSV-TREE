@@ -1,4 +1,3 @@
-
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { 
   getAuth, 
@@ -27,11 +26,9 @@ import {
   query,
   orderBy,
   deleteDoc,
-  enableMultiTabIndexedDbPersistence,
   type Firestore
 } from "firebase/firestore";
 
-// --- Configuration ---
 const firebaseConfig = {
   apiKey: "AIzaSyD6cgBbnYqYd2zRVUMyjyD8fvd8V7hMPKo",
   authDomain: "meta-data-webapp.firebaseapp.com",
@@ -43,27 +40,17 @@ const firebaseConfig = {
   measurementId: "G-QC4GZLC0R4"
 };
 
-// Fix Firebase initialization by ensuring app is correctly typed and initialized once
-// Modular Firebase v9+ approach
 const app: FirebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 export const auth: Auth = getAuth(app);
 export const db: Firestore = getFirestore(app);
 
-// Enable offline persistence if in browser context
-if (typeof window !== 'undefined') {
-  enableMultiTabIndexedDbPersistence(db).catch((err) => {
-    if (err.code === 'failed-precondition') {
-      console.warn('Multiple tabs open, persistence enabled in one tab.');
-    } else if (err.code === 'unimplemented') {
-      console.warn('Browser does not support persistence.');
-    }
-  });
-}
-
 export const googleProvider = new GoogleAuthProvider();
+// Explicitly set the client ID if provided externally, though usually handled by Firebase
+googleProvider.setCustomParameters({
+  'prompt': 'select_account'
+});
 
-// Re-exporting functions to be used across the app from a single source
 export { 
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -86,6 +73,5 @@ export {
   deleteDoc
 };
 
-// Exporting types for usage in context and other services
 export type { Auth, User, Firestore };
 export default app;

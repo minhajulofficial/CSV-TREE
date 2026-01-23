@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   auth, 
@@ -55,9 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(currentUser as User | null);
       
       if (currentUser) {
-        setAuthModalOpen(false);
         setProfileLoading(true);
-        
         const userDocRef = doc(db, 'users', currentUser.uid);
         
         if (unsubscribeProfile) unsubscribeProfile();
@@ -67,21 +64,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setProfile(snapshot.data() as UserProfile);
             setProfileLoading(false);
           } else {
-            // New user initialization
-            const initialSetup = {
+            // New user initialization logic
+            const initialSetup: UserProfile = {
               credits: 100,
               maxCredits: 100,
               tier: 'Free',
-              email: currentUser.email,
-              displayName: currentUser.displayName,
+              email: currentUser.email || '',
+              displayName: currentUser.displayName || 'Contributor',
               lastResetDate: new Date().toISOString()
             };
             setDoc(userDocRef, initialSetup, { merge: true })
-              .then(() => setProfileLoading(false))
-              .catch(() => setProfileLoading(false));
+              .then(() => {
+                setProfile(initialSetup);
+                setProfileLoading(false);
+              })
+              .catch((err) => {
+                console.error("Firestore Init Error:", err);
+                setProfileLoading(false);
+              });
           }
         }, (err) => {
-          console.error("Sync error", err);
+          console.error("Profile sync error:", err);
           setProfileLoading(false);
         });
       } else {
@@ -122,11 +125,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithGoogle = async () => {
     setError(null);
-    try { await signInWithPopup(auth, googleProvider); } 
+    try { 
+      await signInWithPopup(auth, googleProvider); 
+    } 
     catch (err: any) { 
+      console.error("Google Auth Error:", err);
       if (err.code !== 'auth/popup-closed-by-user') {
         setError(err.message);
-        throw err;
       }
     }
   };
@@ -134,7 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithEmail = async (email: string, pass: string) => {
     setError(null);
     try { await signInWithEmailAndPassword(auth, email, pass); } 
-    catch (err: any) { setError(err.message); throw err; }
+    catch (err: any) { setError(err.message); }
   };
 
   const registerWithEmail = async (email: string, pass: string, name: string) => {
@@ -142,13 +147,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await createUserWithEmailAndPassword(auth, email, pass);
       await fbUpdateProfile(res.user, { displayName: name });
-    } catch (err: any) { setError(err.message); throw err; }
+    } catch (err: any) { setError(err.message); }
   };
 
   const resetPassword = async (email: string) => {
     setError(null);
     try { await sendPasswordResetEmail(auth, email); } 
-    catch (err: any) { setError(err.message); throw err; }
+    catch (err: any) { setError(err.message); }
   };
 
   const logout = async () => {
