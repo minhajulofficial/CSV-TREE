@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   auth, 
@@ -16,7 +15,7 @@ import {
   setDoc,
   updateDoc,
   onSnapshot,
-  type User // Importing type from centralized service
+  type User 
 } from '../services/firebase';
 import { UserProfile } from '../types';
 
@@ -68,6 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setProfile(snapshot.data() as UserProfile);
             setProfileLoading(false);
           } else {
+            // New user setup for Google or Email login
             const initialSetup = {
               credits: 100,
               maxCredits: 100,
@@ -75,11 +75,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               lastResetDate: new Date().toISOString()
             };
             setDoc(userDocRef, initialSetup, { merge: true })
-              .catch(err => console.warn("Initialization retry...", err.message));
+              .then(() => setProfileLoading(false))
+              .catch(err => {
+                console.warn("Profile Initialization Error:", err.message);
+                setProfileLoading(false);
+              });
           }
         }, (err) => {
           console.error("Profile sync error:", err);
-          if (err.code !== 'unavailable') setProfileLoading(false);
+          setProfileLoading(false);
         });
       } else {
         setProfile(null);
@@ -121,14 +125,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithGoogle = async () => {
     setError(null);
-    try { await signInWithPopup(auth, googleProvider); } 
-    catch (err: any) { if (err.code !== 'auth/popup-closed-by-user') setError(err.message); }
+    try { 
+      await signInWithPopup(auth, googleProvider); 
+    } 
+    catch (err: any) { 
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setError(err.message); 
+        throw err;
+      }
+    }
   };
 
   const loginWithEmail = async (email: string, pass: string) => {
     setError(null);
-    try { await signInWithEmailAndPassword(auth, email, pass); } 
-    catch (err: any) { setError(err.message); throw err; }
+    try { 
+      await signInWithEmailAndPassword(auth, email, pass); 
+    } 
+    catch (err: any) { 
+      setError(err.message); 
+      throw err; 
+    }
   };
 
   const registerWithEmail = async (email: string, pass: string, name: string) => {
@@ -136,17 +152,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await createUserWithEmailAndPassword(auth, email, pass);
       await fbUpdateProfile(res.user, { displayName: name });
-    } catch (err: any) { setError(err.message); throw err; }
+    } catch (err: any) { 
+      setError(err.message); 
+      throw err; 
+    }
   };
 
   const resetPassword = async (email: string) => {
     setError(null);
     try { await sendPasswordResetEmail(auth, email); } 
-    catch (err: any) { setError(err.message); throw err; }
+    catch (err: any) { 
+      setError(err.message); 
+      throw err; 
+    }
   };
 
   const logout = async () => {
-    try { await signOut(auth); } catch (err: any) {}
+    try { await signOut(auth); } catch (err: any) { console.error("Logout error", err); }
   };
 
   return (

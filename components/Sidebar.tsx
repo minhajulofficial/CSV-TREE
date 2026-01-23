@@ -38,7 +38,6 @@ const Sidebar: React.FC<SidebarProps> = ({ settings, setSettings }) => {
   };
 
   const isExtractionMode = settings.mode === 'Metadata';
-  const isGroqMissing = !profile?.groqApiKey;
 
   return (
     <aside className="w-[280px] fixed left-0 top-16 bottom-0 bg-bgSidebar border-r border-borderMain overflow-y-auto px-6 py-10 z-40 select-none no-scrollbar transition-all duration-300 shadow-2xl">
@@ -70,14 +69,6 @@ const Sidebar: React.FC<SidebarProps> = ({ settings, setSettings }) => {
               className={`flex-1 py-3 text-[10px] font-black uppercase tracking-[0.2em] rounded-[0.85rem] transition-all relative ${settings.engine === 'Groq' ? 'bg-accent text-white shadow-lg scale-[1.02]' : 'text-textDim hover:text-textMain'}`}
             >
               Groq
-              {isGroqMissing && (
-                <div className="absolute -top-1 -right-1">
-                   <div className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border border-white"></span>
-                  </div>
-                </div>
-              )}
             </button>
           </div>
         )}
