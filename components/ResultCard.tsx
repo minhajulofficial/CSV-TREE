@@ -30,7 +30,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ item, onDelete, onUpdate }) => 
   };
 
   const fileSize = "0.53 MB"; 
-  const fileType = item.fileName.split('.').pop()?.toUpperCase() || "IMAGE";
+  const fileType = (item.fileName || "").split('.').pop()?.toUpperCase() || "IMAGE";
 
   return (
     <div className={`bg-white dark:bg-surface border rounded-[2rem] overflow-hidden flex flex-col md:flex-row shadow-sm hover:shadow-md transition-all duration-300 group ${isPremium ? 'border-primary/20' : 'border-borderMain'}`}>
@@ -55,7 +55,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ item, onDelete, onUpdate }) => 
       <div className="flex-1 p-6 md:p-8 space-y-6">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <h3 className="text-sm font-black text-slate-800 dark:text-white truncate max-w-[200px] md:max-w-md">{item.fileName}</h3>
+            <h3 className="text-sm font-black text-slate-800 dark:text-white truncate max-w-[200px] md:max-w-md">{item.fileName || 'Untitled Asset'}</h3>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{fileSize} • {fileType}</p>
           </div>
           <button onClick={onDelete} className="text-slate-300 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-lg">
