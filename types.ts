@@ -2,7 +2,7 @@
 export type Platform = 'General' | 'AdobeStock' | 'Freepik' | 'Shutterstock' | 'Vecteezy' | 'Depositphotos' | '123RF' | 'Dreamstime';
 export type FileType = 'Images' | 'Vectors' | 'Videos';
 export type AIEngine = 'Gemini' | 'Groq';
-export type AppView = 'Home' | 'Admin' | 'About' | 'Pricing' | 'Tutorials' | 'Privacy' | 'Terms';
+export type AppView = 'Home' | 'Admin' | 'About' | 'Pricing' | 'Tutorials' | 'Privacy' | 'Terms' | 'Support' | 'Status';
 
 export interface APIKeyRecord {
   id: string;
@@ -32,6 +32,17 @@ export interface SystemConfig {
     visibility: 'Free' | 'All';
     list: AdEntry[];
     externalScript?: string;
+  };
+  site: {
+    footerCredit: string;
+    socials: {
+      facebook: string;
+      twitter: string;
+      instagram: string;
+      youtube: string;
+    };
+    status: string;
+    version: string;
   };
 }
 
