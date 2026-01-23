@@ -1,30 +1,30 @@
-
 import { AppSettings } from "../types";
 
 /**
- * Processes an image using Groq (Llama 3.2 Vision) to extract microstock metadata or generate prompts.
+ * Processes an image using Groq's Llama 3.2 Vision capabilities.
  */
 export const processImageWithGroq = async (imageBase64: string, settings: AppSettings, apiKey: string) => {
-  if (!apiKey) throw new Error("API Key missing for Groq processing.");
+  if (!apiKey) throw new Error("Groq API key required.");
 
-  const base64Data = imageBase64.split(',')[1];
+  const base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
 
   let systemPrompt = "";
   if (settings.mode === 'Metadata') {
     systemPrompt = `
-      Act as a microstock metadata expert. Analyze the image and return ONLY a JSON object.
-      Required Format:
+      Professional microstock metadata expert for ${settings.platform}.
+      Analyze image and return ONLY JSON.
+      
+      Schema:
       {
-        "title": "SEO title (${settings.minTitle}-${settings.maxTitle} words)",
-        "keywords": ["tag1", "tag2", ... exactly ${settings.maxKeywords} items],
-        "categories": ["Category1", "Category2"],
-        "description": "Summary (${settings.minDesc}-${settings.maxDesc} words)"
+        "title": "${settings.minTitle}-${settings.maxTitle} words",
+        "keywords": [exactly ${settings.maxKeywords} tags],
+        "categories": ["Cat1", "Cat2"],
+        "description": "${settings.minDesc}-${settings.maxDesc} words"
       }
-      Target: ${settings.platform}.
-      ${settings.singleWordKeywords ? 'Keywords must be single words only.' : ''}
+      ${settings.singleWordKeywords ? 'STRICT: Keywords must be single words.' : ''}
     `;
   } else {
-    systemPrompt = `Analyze this image and provide a highly detailed Generative AI prompt. Return ONLY JSON: { "prompt": "..." }`;
+    systemPrompt = `Analyze image and return a detailed AI generation prompt as JSON: { "prompt": "..." }`;
   }
 
   try {
@@ -57,13 +57,13 @@ export const processImageWithGroq = async (imageBase64: string, settings: AppSet
 
     if (!response.ok) {
       const err = await response.json();
-      throw new Error(err.error?.message || "Groq API error.");
+      throw new Error(err.error?.message || "Groq service unavailable.");
     }
 
     const data = await response.json();
     return JSON.parse(data.choices[0].message.content);
-  } catch (error) {
-    console.error("Groq Error:", error);
-    throw error;
+  } catch (error: any) {
+    console.error("Groq Processing Error:", error);
+    throw new Error(error.message || "Failed to analyze via Groq.");
   }
 };
