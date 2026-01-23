@@ -6,13 +6,11 @@ import {
   onValue,
   update,
   remove,
-  increment,
   set
 } from "../services/firebase";
 import { 
   Users, Shield, CreditCard, Search, ArrowLeft, 
-  Zap, Star, Loader2, Trash2, Mail, ExternalLink,
-  ShieldCheck, AlertCircle, TrendingUp, Settings, Code, Image, ToggleLeft, ToggleRight, Save, RefreshCcw
+  Zap, Loader2, Trash2, TrendingUp, Code, Image, ToggleLeft, ToggleRight, Save
 } from 'lucide-react';
 import { SystemConfig } from '../types';
 
@@ -43,31 +41,44 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'Users' | 'System'>('Users');
-  const [config, setConfig] = useState<SystemConfig | null>(null);
+  const [config, setConfig] = useState<SystemConfig>(DEFAULT_CONFIG);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    // 1. Sync Users
     const usersRef = ref(rtdb, 'users');
     const unsubUsers = onValue(usersRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const userList = Object.entries(data).map(([id, val]) => ({ id, ...(val as any) }));
-        userList.sort((a, b) => (b.tier === 'Premium' ? -1 : 1));
-        setAllUsers(userList);
+      try {
+        const data = snapshot.val();
+        if (data && typeof data === 'object') {
+          const userList = Object.entries(data).map(([id, val]) => ({ 
+            id, 
+            ...(val as any) 
+          }));
+          userList.sort((a, b) => (b.tier === 'Premium' ? -1 : 1));
+          setAllUsers(userList);
+        } else {
+          setAllUsers([]);
+        }
+      } catch (err) {
+        console.error("Error parsing users:", err);
       }
       setLoading(false);
-    }, (err) => {
-      console.error("Users sync error:", err);
+    }, (error) => {
+      console.error("Firebase Read Error:", error);
       setLoading(false);
     });
 
+    // 2. Sync System Config
     const configRef = ref(rtdb, 'system/config');
     const unsubConfig = onValue(configRef, (snapshot) => {
       if (snapshot.exists()) {
-        setConfig(snapshot.val());
-      } else {
-        // If config doesn't exist, show default locally
-        setConfig(DEFAULT_CONFIG);
+        const data = snapshot.val();
+        // Merge with defaults to ensure no missing properties
+        setConfig({
+          developer: { ...DEFAULT_CONFIG.developer, ...(data.developer || {}) },
+          ads: { ...DEFAULT_CONFIG.ads, ...(data.ads || {}) }
+        });
       }
     });
 
@@ -75,22 +86,24 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
   }, []);
 
   const saveConfig = async () => {
-    if (!config) return;
     setIsSaving(true);
     try {
       await set(ref(rtdb, 'system/config'), config);
-      alert("Configuration Sync Successful!");
+      alert("Configuration Synchronized Successfully.");
     } catch (err) { 
-      alert("Failed to update config. Check permissions."); 
+      alert("Failed to update config. Check your database rules."); 
     } finally {
       setIsSaving(false);
     }
   };
 
-  const filteredUsers = allUsers.filter(u => 
-    u.email?.toLowerCase().includes(search.toLowerCase()) || 
-    u.displayName?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredUsers = allUsers.filter(u => {
+    const searchLower = search.toLowerCase();
+    return (
+      (u.email?.toLowerCase() || "").includes(searchLower) || 
+      (u.displayName?.toLowerCase() || "").includes(searchLower)
+    );
+  });
 
   if (loading) return (
     <div className="min-h-screen bg-bgMain flex flex-col items-center justify-center gap-6">
@@ -121,8 +134,8 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
               <StatCard label="Operators" value={allUsers.length} icon={<Users />} color="text-primary" />
               <StatCard label="Premium" value={allUsers.filter(u => u.tier === 'Premium').length} icon={<Shield />} color="text-accent" />
-              <StatCard label="Energy" value={allUsers.reduce((a, b) => a + (b.credits || 0), 0)} icon={<CreditCard />} color="text-textMain" />
-              <StatCard label="Health" value="100%" icon={<TrendingUp />} color="text-green-500" />
+              <StatCard label="Energy" value={allUsers.reduce((a, b) => a + (Number(b.credits) || 0), 0)} icon={<CreditCard />} color="text-textMain" />
+              <StatCard label="Health" value="Online" icon={<TrendingUp />} color="text-green-500" />
             </div>
 
             <div className="bg-surface rounded-[2.5rem] border border-borderMain shadow-2xl overflow-hidden backdrop-blur-3xl">
@@ -145,33 +158,29 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-borderMain/40 text-textMain">
-                    {filteredUsers.length > 0 ? filteredUsers.map(u => (
+                    {filteredUsers.map(u => (
                       <tr key={u.id} className="hover:bg-primary/5 transition-all group">
                         <td className="px-10 py-6">
                            <div className="flex items-center gap-4">
                              <img src={u.photoURL || "https://via.placeholder.com/40"} className="w-10 h-10 rounded-xl object-cover border border-borderMain" />
                              <div className="space-y-0.5">
-                                <p className="text-[11px] font-black uppercase truncate max-w-[150px]">{u.displayName || 'No Name'}</p>
-                                <p className="text-[9px] text-textDim truncate max-w-[150px]">{u.email}</p>
+                                <p className="text-[11px] font-black uppercase truncate max-w-[200px]">{u.displayName || 'Unknown'}</p>
+                                <p className="text-[9px] text-textDim truncate max-w-[200px]">{u.email}</p>
                              </div>
                            </div>
                         </td>
                         <td className="px-10 py-6">
-                           <button onClick={() => toggleTier(u.id, u.tier)} className={`px-4 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest border transition-all ${u.tier === 'Premium' ? 'bg-primary/10 border-primary text-primary hover:bg-primary hover:text-white' : 'bg-slate-100 border-borderMain text-textDim hover:border-slate-400'}`}>
+                           <button onClick={() => toggleTier(u.id, u.tier)} className={`px-4 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest border ${u.tier === 'Premium' ? 'bg-primary/10 border-primary text-primary' : 'bg-slate-100 border-borderMain text-textDim'}`}>
                               {u.tier || 'Free'}
                            </button>
                         </td>
                         <td className="px-10 py-6 text-xs font-black tabular-nums">{u.credits || 0} units</td>
                         <td className="px-10 py-6 text-right space-x-2">
-                           <button onClick={() => adjustCredits(u.id, u.credits, 500)} title="Add 500 Credits" className="p-2.5 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all"><Zap size={14} /></button>
-                           <button onClick={() => deleteUserRecord(u.id)} title="Delete Record" className="p-2.5 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14} /></button>
+                           <button onClick={() => adjustCredits(u.id, u.credits, 500)} className="p-2.5 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all"><Zap size={14} /></button>
+                           <button onClick={() => deleteUserRecord(u.id)} className="p-2.5 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14} /></button>
                         </td>
                       </tr>
-                    )) : (
-                      <tr>
-                        <td colSpan={4} className="px-10 py-20 text-center text-[10px] font-black uppercase tracking-[0.2em] text-textDim">No active personnel found.</td>
-                      </tr>
-                    )}
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -180,34 +189,34 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in slide-in-from-bottom-4">
             {/* Developer Config */}
-            <div className="bg-surface p-8 rounded-[2.5rem] border border-borderMain space-y-6 shadow-xl">
+            <div className="bg-surface p-8 rounded-[2.5rem] border border-borderMain space-y-6 shadow-sm">
               <div className="flex items-center gap-3 pb-4 border-b border-borderMain">
                 <Code className="text-primary" />
                 <h3 className="text-sm font-black uppercase tracking-widest">Developer Identity</h3>
               </div>
               <div className="space-y-4">
-                <AdminInput label="Name" value={config?.developer?.name || ''} onChange={(v) => setConfig(prev => ({...prev!, developer: {...prev!.developer, name: v}}))} />
-                <AdminInput label="Role" value={config?.developer?.role || ''} onChange={(v) => setConfig(prev => ({...prev!, developer: {...prev!.developer, role: v}}))} />
-                <AdminInput label="Bio" value={config?.developer?.bio || ''} onChange={(v) => setConfig(prev => ({...prev!, developer: {...prev!.developer, bio: v}}))} />
-                <AdminInput label="Avatar URL" value={config?.developer?.avatar || ''} onChange={(v) => setConfig(prev => ({...prev!, developer: {...prev!.developer, avatar: v}}))} />
-                <AdminInput label="GitHub" value={config?.developer?.github || ''} onChange={(v) => setConfig(prev => ({...prev!, developer: {...prev!.developer, github: v}}))} />
-                <AdminInput label="Portfolio" value={config?.developer?.portfolio || ''} onChange={(v) => setConfig(prev => ({...prev!, developer: {...prev!.developer, portfolio: v}}))} />
+                <AdminInput label="Name" value={config.developer.name} onChange={(v) => setConfig(prev => ({...prev, developer: {...prev.developer, name: v}}))} />
+                <AdminInput label="Role" value={config.developer.role} onChange={(v) => setConfig(prev => ({...prev, developer: {...prev.developer, role: v}}))} />
+                <AdminInput label="Bio" value={config.developer.bio} onChange={(v) => setConfig(prev => ({...prev, developer: {...prev.developer, bio: v}}))} />
+                <AdminInput label="Avatar URL" value={config.developer.avatar} onChange={(v) => setConfig(prev => ({...prev, developer: {...prev.developer, avatar: v}}))} />
+                <AdminInput label="GitHub" value={config.developer.github || ''} onChange={(v) => setConfig(prev => ({...prev, developer: {...prev.developer, github: v}}))} />
+                <AdminInput label="Portfolio" value={config.developer.portfolio || ''} onChange={(v) => setConfig(prev => ({...prev, developer: {...prev.developer, portfolio: v}}))} />
               </div>
             </div>
 
             {/* Ad Management */}
-            <div className="bg-surface p-8 rounded-[2.5rem] border border-borderMain space-y-6 shadow-xl">
+            <div className="bg-surface p-8 rounded-[2.5rem] border border-borderMain space-y-6 shadow-sm">
               <div className="flex items-center justify-between pb-4 border-b border-borderMain">
                 <div className="flex items-center gap-3">
                   <Image className="text-primary" />
                   <h3 className="text-sm font-black uppercase tracking-widest">Ad Ecosystem</h3>
                 </div>
                 <button 
-                  onClick={() => setConfig(prev => ({...prev!, ads: {...prev!.ads, enabled: !prev!.ads.enabled}}))}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${config?.ads.enabled ? 'bg-primary text-white' : 'bg-slate-100 text-textDim'}`}
+                  onClick={() => setConfig(prev => ({...prev, ads: {...prev.ads, enabled: !prev.ads.enabled}}))}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${config.ads.enabled ? 'bg-primary text-white' : 'bg-slate-100 text-textDim'}`}
                 >
-                  {config?.ads.enabled ? <ToggleRight /> : <ToggleLeft />}
-                  Status: {config?.ads.enabled ? 'Live' : 'Off'}
+                  {config.ads.enabled ? <ToggleRight /> : <ToggleLeft />}
+                  Status: {config.ads.enabled ? 'Live' : 'Off'}
                 </button>
               </div>
               <div className="space-y-4">
@@ -215,16 +224,16 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
                    <label className="text-[10px] font-black uppercase text-textDim px-1">Visibility Rules</label>
                    <select 
                       className="w-full bg-bgMain rounded-xl px-4 py-3 text-xs font-bold border border-borderMain outline-none text-textMain"
-                      value={config?.ads.visibility || 'Free'}
-                      onChange={(e) => setConfig(prev => ({...prev!, ads: {...prev!.ads, visibility: e.target.value as any}}))}
+                      value={config.ads.visibility}
+                      onChange={(e) => setConfig(prev => ({...prev, ads: {...prev.ads, visibility: e.target.value as any}}))}
                    >
                       <option value="Free">Free Users Only</option>
                       <option value="All">Global (Everyone)</option>
                    </select>
                 </div>
-                <AdminInput label="Ad Label" value={config?.ads?.label || ''} onChange={(v) => setConfig(prev => ({...prev!, ads: {...prev!.ads, label: v}}))} />
-                <AdminInput label="Image URL" value={config?.ads?.image || ''} onChange={(v) => setConfig(prev => ({...prev!.ads, image: v}}))} />
-                <AdminInput label="Redirect Link" value={config?.ads?.link || ''} onChange={(v) => setConfig(prev => ({...prev!, ads: {...prev!.ads, link: v}}))} />
+                <AdminInput label="Ad Label" value={config.ads.label} onChange={(v) => setConfig(prev => ({...prev, ads: {...prev.ads, label: v}}))} />
+                <AdminInput label="Image URL" value={config.ads.image} onChange={(v) => setConfig(prev => ({...prev, ads: {...prev.ads, image: v}}))} />
+                <AdminInput label="Redirect Link" value={config.ads.link} onChange={(v) => setConfig(prev => ({...prev, ads: {...prev.ads, link: v}}))} />
               </div>
             </div>
 
@@ -246,12 +255,18 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack }) => {
 const AdminInput = ({ label, value, onChange }: { label: string, value: string, onChange: (v: string) => void }) => (
   <div className="space-y-1.5">
     <label className="text-[10px] font-black uppercase text-textDim px-1 tracking-widest">{label}</label>
-    <input type="text" value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-bgMain rounded-xl px-4 py-3 text-xs font-bold border border-borderMain outline-none focus:border-primary/40 transition-all text-textMain" placeholder={`Enter ${label.toLowerCase()}...`} />
+    <input 
+      type="text" 
+      value={value || ''} 
+      onChange={(e) => onChange(e.target.value)} 
+      className="w-full bg-bgMain rounded-xl px-4 py-3 text-xs font-bold border border-borderMain outline-none focus:border-primary/40 transition-all text-textMain placeholder:opacity-30" 
+      placeholder={`Set ${label.toLowerCase()}...`}
+    />
   </div>
 );
 
 const StatCard = ({ label, value, icon, color }: any) => (
-  <div className="bg-surface p-5 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border border-borderMain shadow-sm flex items-center justify-between group hover:border-primary/20 transition-all">
+  <div className="bg-surface p-5 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border border-borderMain shadow-sm flex items-center justify-between group">
     <div>
       <p className={`text-[8px] md:text-[10px] font-black uppercase tracking-widest mb-1.5 md:mb-3 ${color}`}>{label}</p>
       <h3 className="text-xl md:text-3xl font-black tracking-tight text-textMain">{typeof value === 'number' ? value.toLocaleString() : value}</h3>
@@ -274,8 +289,8 @@ const toggleTier = async (id: string, current: string) => {
 const adjustCredits = async (id: string, current: number, amount: number) => {
   try {
     await update(ref(rtdb, `users/${id}`), { 
-      credits: (current || 0) + amount,
-      maxCredits: Math.max((current || 0) + amount, 100)
+      credits: (Number(current) || 0) + amount,
+      maxCredits: Math.max((Number(current) || 0) + amount, 100)
     });
   } catch (err) { alert("Energy refuel failed."); }
 };
