@@ -1,15 +1,16 @@
 
 import React, { useState } from 'react';
-import { Copy, Download, CheckCircle, Loader2, Sparkles, FileText, Cpu, Trash2 } from 'lucide-react';
+import { Copy, Trash2, CheckCircle, FileText, ChevronDown } from 'lucide-react';
 import { ExtractedMetadata } from '../types';
 
 interface ResultCardProps {
   item: ExtractedMetadata;
   onRegenerate: () => void;
   onDelete: () => void;
+  onUpdate: (id: string, updates: Partial<ExtractedMetadata>) => void;
 }
 
-const ResultCard: React.FC<ResultCardProps> = ({ item, onDelete }) => {
+const ResultCard: React.FC<ResultCardProps> = ({ item, onDelete, onUpdate }) => {
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const copyToClipboard = (text: string, field: string) => {
@@ -18,147 +19,117 @@ const ResultCard: React.FC<ResultCardProps> = ({ item, onDelete }) => {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const downloadCSV = () => {
-    const isPrompt = !!item.prompt;
-    const headers = isPrompt ? ['Filename', 'Prompt'] : ['Filename', 'Title', 'Keywords', 'Category', 'Description'];
-    const row = isPrompt
-      ? [item.fileName, item.prompt]
-      : [item.fileName, item.title || '', (item.keywords || []).join(', '), (item.categories || []).join(', '), item.description || ''];
-
-    const csvContent = "data:text/csv;charset=utf-8," + [headers, row].map(e => e.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(",")).join("\n");
-    const link = document.createElement("a");
-    link.setAttribute("href", encodeURI(csvContent));
-    link.setAttribute("download", `CSV_TREE_${item.fileName}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const statusColors = {
+    pending: 'bg-slate-100 text-slate-500',
+    processing: 'bg-amber-100 text-amber-600',
+    completed: 'bg-green-100 text-green-600',
+    error: 'bg-red-100 text-red-600'
   };
 
-  if (item.status === 'processing' || item.status === 'pending') {
-    return (
-      <div className="bg-surface border border-borderMain rounded-[2rem] p-12 flex items-center justify-center min-h-[500px] animate-pulse">
-        <div className="flex flex-col items-center gap-6 text-center">
-          <Loader2 className={`animate-spin ${item.engine === 'Groq' ? 'text-accent' : 'text-primary'}`} size={48} />
-          <div className="space-y-2">
-            <p className="text-textMain text-lg font-bold tracking-tight">Processing {item.fileName}</p>
-            <p className="text-textDim text-[10px] uppercase tracking-[0.3em] font-black">{item.engine} Engine Active</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const fileSize = "0.53 MB"; // Mocked for UI parity
+  const fileType = item.fileName.split('.').pop()?.toUpperCase() || "IMAGE";
 
   return (
-    <div className="bg-surface border border-borderMain rounded-[2.5rem] overflow-hidden flex flex-col lg:flex-row min-h-[600px] shadow-xl hover:shadow-2xl transition-all duration-500 group fade-up">
-      {/* Left Panel: Preview */}
-      <div className="w-full lg:w-[42%] border-r border-borderMain p-10 flex flex-col gap-8 bg-bgSidebar/20">
-        <div className="flex items-center justify-between">
-          <h4 className="text-primary text-xs font-black uppercase tracking-[0.2em]">Visual Input</h4>
-          <button onClick={onDelete} className="p-2 text-textDim hover:text-accent transition-colors">
-            <Trash2 size={16} />
-          </button>
+    <div className="bg-white dark:bg-surface border border-borderMain rounded-2xl overflow-hidden flex flex-col md:flex-row shadow-sm hover:shadow-md transition-all duration-300 group">
+      {/* Thumbnail Area */}
+      <div className="w-full md:w-72 bg-slate-50 dark:bg-black/20 p-6 flex flex-col gap-4 relative border-r border-borderMain">
+        <div className={`absolute top-4 left-4 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusColors[item.status]}`}>
+          {item.status}
         </div>
-        <div className="flex-1 bg-bgMain rounded-[2rem] flex items-center justify-center p-8 overflow-hidden relative shadow-inner border border-borderMain">
+        <div className="flex-1 min-h-[160px] flex items-center justify-center rounded-xl overflow-hidden bg-white dark:bg-white/5 border border-borderMain/50 shadow-sm p-4">
           <img 
             src={item.thumbnail} 
             alt="Preview" 
-            className="max-w-full max-h-full object-contain drop-shadow-2xl transition-transform duration-700 group-hover:scale-[1.03]" 
+            className="max-w-full max-h-full object-contain" 
           />
-        </div>
-        <div className="flex items-center gap-2">
-           <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${item.engine === 'Groq' ? 'bg-accent/10 text-accent' : 'bg-primary/10 text-primary'}`}>
-             <Cpu size={12} className="inline mr-2" /> {item.engine} Output
-           </div>
         </div>
       </div>
 
-      {/* Right Panel: Content */}
-      <div className="flex-1 p-10 flex flex-col gap-8 bg-surface">
-        <div className="flex justify-between items-start">
-          <h4 className="text-primary text-xs font-black uppercase tracking-[0.2em]">Generated Output</h4>
-          <button 
-            onClick={downloadCSV}
-            className="bg-primary text-[#0a0c10] px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20"
-          >
-            <Download size={14} /> Export CSV
+      {/* Content Area */}
+      <div className="flex-1 p-8 space-y-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-white truncate max-w-md">{item.fileName}</h3>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{fileSize} • {fileType}</p>
+          </div>
+          <button onClick={onDelete} className="text-slate-300 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-lg">
+            <Trash2 size={18} />
           </button>
         </div>
 
-        <div className="space-y-8 overflow-y-auto no-scrollbar pr-2 pb-4">
-          {item.prompt ? (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <span className="text-textDim text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                  <Sparkles size={14} /> AI Optimized Prompt
-                </span>
-                <button onClick={() => copyToClipboard(item.prompt || '', 'prompt')} className="text-textDim hover:text-primary transition-all">
-                  {copiedField === 'prompt' ? <CheckCircle size={18} className="text-green-500" /> : <Copy size={18} />}
+        {/* Title Field */}
+        <div className="space-y-2">
+          <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-400 tracking-widest">
+            <span>Title</span>
+          </div>
+          <div className="relative">
+            <textarea
+              value={item.title || ''}
+              onChange={(e) => onUpdate(item.id, { title: e.target.value })}
+              placeholder="Waiting for AI..."
+              className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-4 text-sm font-medium focus:outline-none focus:border-green-500/40 transition-all resize-none h-20 text-slate-700 dark:text-slate-200"
+            />
+            <div className="absolute bottom-4 right-4 flex items-center gap-4">
+              <span className="text-[10px] text-slate-400 font-bold">{(item.title || '').length} chars</span>
+              <button 
+                onClick={() => copyToClipboard(item.title || '', 'title')} 
+                className="flex items-center gap-1.5 text-[10px] font-black text-green-500 uppercase tracking-widest hover:brightness-90"
+              >
+                {copiedField === 'title' ? <CheckCircle size={12} /> : <Copy size={12} />}
+                Copy Title
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Category and Keywords Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Category */}
+          <div className="space-y-2">
+            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Category</span>
+            <div className="relative group">
+              <select 
+                className="w-full appearance-none bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3.5 text-sm font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:border-green-500/40 transition-all cursor-pointer"
+                value={item.categories?.[0] || ""}
+                onChange={(e) => onUpdate(item.id, { categories: [e.target.value] })}
+              >
+                <option value="">Select Category...</option>
+                <option value="Abstract">Abstract</option>
+                <option value="Animals">Animals</option>
+                <option value="Nature">Nature</option>
+                <option value="People">People</option>
+                <option value="Business">Business</option>
+              </select>
+              <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Keywords */}
+          <div className="space-y-2">
+            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Keywords</span>
+            <div className="relative">
+              <textarea
+                value={(item.keywords || []).join(', ')}
+                onChange={(e) => onUpdate(item.id, { keywords: e.target.value.split(',').map(k => k.trim()) })}
+                placeholder="Waiting for AI..."
+                className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-4 text-sm font-medium focus:outline-none focus:border-green-500/40 transition-all resize-none h-20 text-slate-700 dark:text-slate-200"
+              />
+              <div className="absolute bottom-4 right-4 flex items-center gap-4">
+                <span className="text-[10px] text-slate-400 font-bold">Found {(item.keywords || []).length} keywords</span>
+                <button 
+                  onClick={() => copyToClipboard((item.keywords || []).join(', '), 'keywords')} 
+                  className="flex items-center gap-1.5 text-[10px] font-black text-green-500 uppercase tracking-widest hover:brightness-90"
+                >
+                  {copiedField === 'keywords' ? <CheckCircle size={12} /> : <Copy size={12} />}
+                  Copy Keywords
                 </button>
               </div>
-              <div className="bg-bgMain border border-borderMain rounded-2xl p-6 shadow-inner">
-                <p className="text-textMain text-sm font-medium leading-relaxed italic">"{item.prompt}"</p>
-              </div>
             </div>
-          ) : (
-            <>
-              <MetadataItem label="Target Title" value={item.title || ''} onCopy={() => copyToClipboard(item.title || '', 'title')} isCopied={copiedField === 'title'} />
-              
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-textDim text-[10px] font-black uppercase tracking-widest">SEO Keywords</span>
-                  <button onClick={() => copyToClipboard((item.keywords || []).join(', '), 'keywords')} className="text-textDim hover:text-primary transition-all">
-                    {copiedField === 'keywords' ? <CheckCircle size={18} className="text-green-500" /> : <Copy size={18} />}
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {(item.keywords || []).map((kw, i) => (
-                    <span key={i} className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold rounded-lg hover:bg-primary hover:text-white transition-all cursor-default">
-                      {kw}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-textDim text-[10px] font-black uppercase tracking-widest">Classification</span>
-                  <button onClick={() => copyToClipboard((item.categories || []).join(', '), 'categories')} className="text-textDim hover:text-primary transition-all">
-                    {copiedField === 'categories' ? <CheckCircle size={18} className="text-green-500" /> : <Copy size={18} />}
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {(item.categories || []).map((cat, i) => (
-                    <span key={i} className="px-4 py-1.5 bg-accent/10 text-accent border border-accent/20 text-[10px] font-black uppercase rounded-lg">
-                      {cat}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="pt-6 border-t border-borderMain space-y-2">
-                 <span className="text-textDim text-[9px] font-black uppercase tracking-widest">Analysis Summary</span>
-                 <p className="text-textDim text-xs leading-relaxed italic">{item.description}</p>
-              </div>
-            </>
-          )}
+          </div>
         </div>
       </div>
     </div>
   );
 };
-
-const MetadataItem: React.FC<{ label: string, value: string, onCopy: () => void, isCopied: boolean }> = ({ label, value, onCopy, isCopied }) => (
-  <div className="space-y-3">
-    <div className="flex justify-between items-center">
-      <span className="text-textDim text-[10px] font-black uppercase tracking-widest">{label}</span>
-      <button onClick={onCopy} className="text-textDim hover:text-primary transition-all">
-        {isCopied ? <CheckCircle size={18} className="text-green-500" /> : <Copy size={18} />}
-      </button>
-    </div>
-    <div className="bg-bgMain border border-borderMain rounded-xl p-4 shadow-inner">
-      <p className="text-textMain text-sm font-bold leading-relaxed">{value}</p>
-    </div>
-  </div>
-);
 
 export default ResultCard;

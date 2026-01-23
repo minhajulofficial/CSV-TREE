@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,7 +16,7 @@
       theme: {
         extend: {
           colors: {
-            primary: '#2563eb',
+            primary: '#22c55e', // Changed to vibrant green as per screenshots
             accent: '#ef4444',
             bgMain: 'var(--bg-main)',
             bgSidebar: 'var(--bg-sidebar)',
@@ -43,15 +44,15 @@
       --bg-main: #f8fafc;
       --bg-sidebar: #ffffff;
       --surface: #ffffff;
-      --border-main: rgba(0, 0, 0, 0.06);
-      --text-main: #0f172a;
+      --border-main: #e2e8f0;
+      --text-main: #1e293b;
       --text-dim: #64748b;
     }
     
     html.dark {
-      --bg-main: #0a0c10;
-      --bg-sidebar: #0f1216;
-      --surface: #12161f;
+      --bg-main: #06100a; /* Dark green hint */
+      --bg-sidebar: #0a180e;
+      --surface: #0f2215;
       --border-main: rgba(255, 255, 255, 0.08);
       --text-main: #f8fafc;
       --text-dim: #94a3b8;
@@ -66,13 +67,12 @@
     }
 
     ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-thumb { background: #2563eb; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb { background: #22c55e; border-radius: 10px; }
 
-    .fade-up { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+    .card-shadow { box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
+    
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
   <script type="importmap">
 {
