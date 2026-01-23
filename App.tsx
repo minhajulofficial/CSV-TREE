@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, ChevronRight, X, Layers, Sparkles, ArrowLeft, Play, LayoutGrid, CheckCircle, ShieldCheck } from 'lucide-react';
+import { Upload, Download, X, Layers, ArrowLeft, Play, LayoutGrid, CheckCircle, ShieldCheck, FileCode, Film, FileImage } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
@@ -9,12 +9,15 @@ import ResultCard from './components/ResultCard';
 import AdminView from './components/AdminView';
 import ManageKeysModal from './components/ManageKeysModal';
 import SuccessModal from './components/SuccessModal';
+import TutorialModal from './components/TutorialModal';
 import { DEFAULT_SETTINGS } from './constants';
 import { AppSettings, ExtractedMetadata, FileType, AppView } from './types';
 import { processImageWithGemini } from './services/geminiService';
 import { processImageWithGroq } from './services/groqService';
 import { useAuth } from './contexts/AuthContext';
 import { rtdb, ref, onValue, set, remove, push, update } from './services/firebase';
+
+const VECTOR_PLACEHOLDER_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAACXBIWXMAAAsTAAALEwEAmpwYAAAByUlEQVR4nO3SQRHAIBDAsMUE/p1SInz0kgmS2dtz7z13AOzM9wXAmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vuCAzhvBiCcGYBwZgDCmQEIZwYgnBmAcGYAwpkBCGcGIIwZgHBmAMKZfQB25vvyA6LPAwS4VAnIAAAAAElFTkSuQmCC";
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>('Home');
@@ -24,6 +27,7 @@ const App: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [isKeysModalOpen, setKeysModalOpen] = useState(false);
   const [isSuccessModalOpen, setSuccessModalOpen] = useState(false);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const { user, profile, deductCredit, setAuthModalOpen } = useAuth();
 
   useEffect(() => {
@@ -58,26 +62,67 @@ const App: React.FC = () => {
       } else {
         setItems([]);
       }
-    }, (error) => {
-      console.error("Metadata Sync Failure:", error);
     });
     return () => unsubscribe();
   }, [user]);
 
-  const processFile = async (file: File) => {
-    const reader = new FileReader();
-    return new Promise<ExtractedMetadata>((resolve) => {
-      reader.onload = async (e) => {
-        const base64 = e.target?.result as string;
-        resolve({
-          id: '',
-          thumbnail: base64,
-          status: 'pending',
-          fileName: file.name
-        });
+  const extractFrameFromVideo = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.src = URL.createObjectURL(file);
+      video.muted = true;
+      video.playsInline = true;
+      video.onloadedmetadata = () => {
+        video.currentTime = 0.5;
       };
-      reader.readAsDataURL(file);
+      video.onseeked = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg');
+        URL.revokeObjectURL(video.src);
+        resolve(dataUrl);
+      };
+      video.onerror = () => {
+        URL.revokeObjectURL(video.src);
+        resolve(VECTOR_PLACEHOLDER_B64);
+      };
     });
+  };
+
+  const processFile = async (file: File): Promise<ExtractedMetadata> => {
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    let thumbnail = VECTOR_PLACEHOLDER_B64;
+
+    if (file.type.startsWith('image/') && extension !== 'svg') {
+      thumbnail = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(file);
+      });
+    } else if (file.type.startsWith('video/')) {
+      thumbnail = await extractFrameFromVideo(file);
+    } else if (extension === 'svg') {
+      // SVG can be read as a data URL easily
+      thumbnail = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(file);
+      });
+    } else {
+      // For AI, EPS, etc. - Use the vector placeholder base64
+      thumbnail = VECTOR_PLACEHOLDER_B64;
+    }
+
+    return {
+      id: '',
+      thumbnail,
+      status: 'pending',
+      fileName: file.name
+    };
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,15 +173,12 @@ const App: React.FC = () => {
         let result;
         let detectedEngine: 'Gemini' | 'Groq' = 'Gemini';
 
-        if (geminiKey) {
+        if (geminiKey || !groqKey) {
           result = await processImageWithGemini(item.thumbnail, settings, profile?.apiKeys);
           detectedEngine = 'Gemini';
-        } else if (groqKey) {
+        } else {
           result = await processImageWithGroq(item.thumbnail, settings, groqKey);
           detectedEngine = 'Groq';
-        } else {
-          result = await processImageWithGemini(item.thumbnail, settings, profile?.apiKeys);
-          detectedEngine = 'Gemini';
         }
 
         const success = await deductCredit(1);
@@ -200,7 +242,6 @@ const App: React.FC = () => {
         <div className="max-w-6xl mx-auto px-10 py-16">
           <PlatformPills selected={settings.platform} onSelect={(p) => setSettings(s => ({ ...s, platform: p }))} />
           
-          {/* New Drag & Drop Area */}
           <div 
             onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} 
             onDragLeave={() => setIsDragging(false)} 
@@ -216,21 +257,22 @@ const App: React.FC = () => {
               <p className="text-slate-400 font-bold">or click to browse</p>
             </div>
 
-            <div className="flex items-center gap-4 text-slate-300 dark:text-slate-600 text-[10px] font-black uppercase tracking-widest mt-6">
-              <ShieldCheck size={16} /> JPG, PNG, SVG, AI, EPS, MP4, MOV
+            <div className="flex items-center gap-6 text-slate-300 dark:text-slate-600 text-[10px] font-black uppercase tracking-widest mt-6">
+              <div className="flex items-center gap-1.5"><FileImage size={14} /> IMAGE</div>
+              <div className="flex items-center gap-1.5"><FileCode size={14} /> VECTOR</div>
+              <div className="flex items-center gap-1.5"><Film size={14} /> VIDEO</div>
             </div>
 
             <div className="mt-12 bg-slate-50 dark:bg-black/20 px-6 py-3 rounded-full flex items-center gap-3 text-[10px] text-slate-500 font-bold border border-slate-200/50">
-               <CheckCircle size={14} className="text-green-500" />
+               <ShieldCheck size={14} className="text-green-500" />
                Processed locally & securely. Your files never leave your browser.
             </div>
 
-            <input type="file" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileUpload} accept="image/*" />
+            <input type="file" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileUpload} accept="image/*,video/*,.svg,.ai,.eps" />
           </div>
 
           {items.length > 0 && (
             <div className="mt-28 space-y-10 animate-in fade-in duration-1000">
-              {/* Process Bar and Stats */}
               <div className="sticky top-20 z-30 space-y-6">
                 <div className="flex items-center justify-center mb-8">
                   <button 
@@ -268,7 +310,6 @@ const App: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Progress Bar */}
                 <div className="h-2 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden shadow-inner">
                   <div 
                     className="h-full bg-green-500 transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(34,197,94,0.5)]" 
@@ -303,7 +344,6 @@ const App: React.FC = () => {
         <div className="prose dark:prose-invert max-w-none text-textDim font-medium leading-relaxed text-lg italic">
           {view === 'About' && "CSV TREE Pro transforms visual assets into searchable, indexed metadata using high-frequency AI clusters. Our mission is to accelerate creator workflows through intelligence."}
           {view === 'Pricing' && "Free operators receive 100 energy units daily. Premium members gain priority access to our compute clusters with 6,000 units per month and early access to new AI models."}
-          {view === 'Tutorials' && "Select your distribution target (e.g., AdobeStock), configure your title and tag length constraints in the sidebar, then drop your media to begin extraction."}
           {(view === 'Privacy' || view === 'Terms') && "Your data remains your property. We operate as a zero-retention bridge between your media and AI engines. All session logs can be purged at any time by the user."}
         </div>
       </div>
@@ -312,7 +352,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-bgMain text-textMain transition-all duration-300 selection:bg-green-500/30 flex flex-col">
-      <Navbar onSwitchView={setView} onManageKeys={() => setKeysModalOpen(true)} />
+      <Navbar onSwitchView={(v) => v === 'Tutorials' ? setIsTutorialOpen(true) : setView(v)} onManageKeys={() => setKeysModalOpen(true)} />
       <Sidebar settings={settings} setSettings={setSettings} onManageKeys={() => setKeysModalOpen(true)} />
       <main className="pl-[280px] pt-16 flex-grow transition-all">{renderContent()}</main>
       <Footer onNavigate={setView} />
@@ -323,6 +363,7 @@ const App: React.FC = () => {
         count={items.filter(i => i.status === 'completed').length} 
         onExport={downloadAllCSV}
       />
+      <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
     </div>
   );
 };

@@ -3,13 +3,12 @@ import React, { useState } from 'react';
 import { 
   ChevronDown, 
   ChevronRight, 
-  Image as ImageIcon,
+  Info,
+  Settings as SettingsIcon,
   Sliders,
   Sparkles,
-  Zap,
-  Key,
-  Activity,
-  Plus
+  Cpu,
+  MonitorCheck
 } from 'lucide-react';
 import { AppSettings } from '../types';
 
@@ -24,8 +23,6 @@ const Sidebar: React.FC<SidebarProps> = ({ settings, setSettings, onManageKeys }
     mode: true,
     customization: true,
     settings: true,
-    connectivity: true,
-    intelligence: true
   });
 
   const toggleSection = (section: keyof typeof expanded) => {
@@ -39,143 +36,143 @@ const Sidebar: React.FC<SidebarProps> = ({ settings, setSettings, onManageKeys }
   const isExtractionMode = settings.mode === 'Metadata';
 
   return (
-    <aside className="w-[280px] fixed left-0 top-16 bottom-0 bg-bgSidebar border-r border-borderMain overflow-y-auto px-6 py-10 z-40 select-none no-scrollbar transition-all duration-300 shadow-2xl">
+    <aside className="w-[280px] fixed left-0 top-16 bottom-0 bg-white dark:bg-[#0a180e] border-r border-slate-100 dark:border-white/5 overflow-y-auto px-5 py-8 z-40 select-none no-scrollbar transition-all duration-300 shadow-sm">
       
-      {/* Mode Selection */}
-      <div className="mb-12">
+      {/* AI Intelligence Mode */}
+      <div className="mb-8">
         <header 
           onClick={() => toggleSection('mode')}
-          className="flex items-center justify-between w-full text-[10px] font-black text-textDim uppercase tracking-[0.3em] mb-6 cursor-pointer hover:text-primary transition-colors"
+          className="flex items-center justify-between w-full text-[11px] font-black text-slate-400 dark:text-textDim uppercase tracking-[0.2em] mb-4 cursor-pointer hover:text-primary transition-colors px-1"
         >
           <div className="flex items-center gap-2">
-            <div className={`p-1 rounded-md transition-colors ${expanded.mode ? 'bg-primary/10 text-primary' : ''}`}>
-              {expanded.mode ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </div>
-            Mode Selection
+            <Sparkles size={14} className="text-primary/60" />
+            AI Workflow
           </div>
-          <Zap size={14} className="opacity-40" />
+          {expanded.mode ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </header>
         {expanded.mode && (
-          <div className="space-y-3">
+          <div className="space-y-2">
             <ModeButton 
-              label="Metadata Pro" 
-              icon={<Sparkles size={18} />} 
+              label="Metadata Vision" 
+              icon={<Sparkles size={16} />} 
               active={settings.mode === 'Metadata'} 
               onClick={() => updateSetting('mode', 'Metadata')} 
-              description="Batch SEO extraction"
+              description="Stock SEO extraction"
             />
             <ModeButton 
-              label="Prompt Engineer" 
-              icon={<ImageIcon size={18} />} 
+              label="Prompt Reverse" 
+              icon={<Cpu size={16} />} 
               active={settings.mode === 'ImageToPrompt'} 
               onClick={() => updateSetting('mode', 'ImageToPrompt')} 
-              description="Reverse generation"
+              description="Creative engineering"
             />
           </div>
         )}
       </div>
 
-      {/* Intelligence Settings */}
-      <div className="mb-12">
-         <header 
-          onClick={() => toggleSection('intelligence')}
-          className="flex items-center justify-between w-full text-[10px] font-black text-textDim uppercase tracking-[0.3em] mb-6 cursor-pointer hover:text-primary transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <div className={`p-1 rounded-md transition-colors ${expanded.intelligence ? 'bg-primary/10 text-primary' : ''}`}>
-              {expanded.intelligence ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </div>
-            Intelligence
-          </div>
-          <Activity size={14} className="opacity-40" />
-        </header>
-        {expanded.intelligence && (
-          <div className="space-y-6 px-1">
-             <div className="bg-bgMain p-4 rounded-2xl border border-borderMain shadow-inner">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-[9px] font-black text-textDim uppercase tracking-widest">Temperature</span>
-                  <span className="text-[10px] font-black text-primary px-2 py-0.5 bg-primary/10 rounded">0.15</span>
-                </div>
-                <input type="range" min="0" max="100" defaultValue="15" className="w-full h-1.5 cursor-pointer appearance-none bg-borderMain rounded-full" />
-                <p className="text-[8px] text-textDim font-bold uppercase mt-3 opacity-60 leading-relaxed italic">Lower values provide more consistent microstock results.</p>
-             </div>
-          </div>
-        )}
-      </div>
-
-      {/* Connectivity Status (Manage Keys Trigger) */}
-      <div className="mb-12">
-        <header 
-          onClick={() => toggleSection('connectivity')}
-          className="flex items-center justify-between w-full text-[10px] font-black text-textDim uppercase tracking-[0.3em] mb-4 cursor-pointer hover:text-primary transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <div className={`p-1 rounded-md transition-colors ${expanded.connectivity ? 'bg-primary/10 text-primary' : ''}`}>
-              {expanded.connectivity ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </div>
-            AI Connectivity
-          </div>
-          <Key size={14} className="opacity-40" />
-        </header>
-        {expanded.connectivity && (
-          <div className="px-1 space-y-3">
-            <button 
-              onClick={onManageKeys}
-              className="w-full bg-white dark:bg-white/5 border border-borderMain rounded-xl p-4 flex items-center justify-between hover:border-primary/40 transition-all group"
-            >
-               <div className="flex items-center gap-3 text-left">
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all"><Key size={14} /></div>
-                  <div className="space-y-0.5">
-                    <p className="text-[9px] font-black text-textMain uppercase tracking-widest">Manage Keys</p>
-                    <p className="text-[8px] text-textDim font-bold uppercase">Configure custom APIs</p>
-                  </div>
-               </div>
-               <Plus size={14} className="text-textDim opacity-40 group-hover:opacity-100 transition-opacity" />
-            </button>
-            <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-center gap-3">
-               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
-               <div className="space-y-0.5">
-                  <p className="text-[9px] font-black text-primary uppercase tracking-widest">Engine Ready</p>
-                  <p className="text-[8px] text-textDim font-bold uppercase">Cloud cluster active</p>
-               </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Metadata Customization */}
+      {/* Metadata Customization Section */}
       {isExtractionMode && (
-        <div className="mb-12">
+        <div className="mb-8">
           <header 
             onClick={() => toggleSection('customization')}
-            className="flex items-center justify-between w-full text-[10px] font-black text-textDim uppercase tracking-[0.3em] mb-8 cursor-pointer hover:text-primary transition-colors"
+            className="flex items-center justify-between w-full text-[11px] font-black text-primary uppercase tracking-tight mb-6 cursor-pointer hover:opacity-80 transition-opacity px-1"
           >
             <div className="flex items-center gap-2">
-              <div className={`p-1 rounded-md transition-colors ${expanded.customization ? 'bg-primary/10 text-primary' : ''}`}>
-                {expanded.customization ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              </div>
-              Output Rules
+              Metadata Customization
             </div>
-            <Sliders size={14} className="opacity-40" />
+            {expanded.customization ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </header>
           {expanded.customization && (
-            <div className="space-y-8 px-1">
-              <SidebarSlider label="Title Length" min={settings.minTitle} max={settings.maxTitle} limit={50} 
-                onMinChange={(v) => updateSetting('minTitle', v)} 
-                onMaxChange={(v) => updateSetting('maxTitle', v)} 
+            <div className="space-y-6 px-1">
+              <SidebarSlider 
+                label="Min Title Words" 
+                value={settings.minTitle} 
+                limit={50} 
+                onChange={(v) => updateSetting('minTitle', v)} 
               />
-              <SidebarSlider label="Tags Amount" min={settings.minKeywords} max={settings.maxKeywords} limit={100} 
-                onMinChange={(v) => updateSetting('minKeywords', v)} 
-                onMaxChange={(v) => updateSetting('maxKeywords', v)} 
+              <SidebarSlider 
+                label="Max Title Words" 
+                value={settings.maxTitle} 
+                limit={50} 
+                onChange={(v) => updateSetting('maxTitle', v)} 
               />
-              <SidebarSlider label="Analysis Deepness" min={settings.minDesc} max={settings.maxDesc} limit={100} 
-                onMinChange={(v) => updateSetting('minDesc', v)} 
-                onMaxChange={(v) => updateSetting('maxDesc', v)} 
+              <SidebarSlider 
+                label="Min Keywords" 
+                value={settings.minKeywords} 
+                limit={100} 
+                onChange={(v) => updateSetting('minKeywords', v)} 
+              />
+              <SidebarSlider 
+                label="Max Keywords" 
+                value={settings.maxKeywords} 
+                limit={100} 
+                onChange={(v) => updateSetting('maxKeywords', v)} 
+              />
+              <SidebarSlider 
+                label="Min Description Words" 
+                value={settings.minDesc} 
+                limit={100} 
+                onChange={(v) => updateSetting('minDesc', v)} 
+              />
+              <SidebarSlider 
+                label="Max Description Words" 
+                value={settings.maxDesc} 
+                limit={100} 
+                onChange={(v) => updateSetting('maxDesc', v)} 
               />
             </div>
           )}
         </div>
       )}
+
+      {/* Settings Section */}
+      <div className="mb-10 pt-4 border-t border-slate-100 dark:border-white/5">
+        <header 
+          onClick={() => toggleSection('settings')}
+          className="flex items-center justify-between w-full text-[11px] font-black text-primary uppercase tracking-[0.1em] mb-8 cursor-pointer hover:opacity-80 transition-opacity px-1"
+        >
+          <div className="flex items-center gap-2 uppercase tracking-widest">
+            <SettingsIcon size={16} className="text-primary" />
+            Settings
+          </div>
+          {expanded.settings ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </header>
+        {expanded.settings && (
+          <div className="space-y-6 px-1">
+            <SidebarToggle 
+              label="Single Word Keywords" 
+              checked={settings.singleWordKeywords} 
+              onChange={(v) => updateSetting('singleWordKeywords', v)} 
+            />
+            <SidebarToggle 
+              label="Silhouette" 
+              checked={settings.silhouette} 
+              onChange={(v) => updateSetting('silhouette', v)} 
+            />
+            <SidebarToggle 
+              label="Custom Prompt" 
+              checked={settings.customPrompt} 
+              onChange={(v) => updateSetting('customPrompt', v)} 
+            />
+            <SidebarToggle 
+              label="Transparent Background" 
+              checked={settings.transparentBackground} 
+              onChange={(v) => updateSetting('transparentBackground', v)} 
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Distribution Target Note */}
+      <div className="mt-auto p-5 bg-slate-50 dark:bg-white/5 rounded-[2rem] border border-slate-100 dark:border-white/5">
+         <div className="flex items-center gap-3 mb-2">
+            <MonitorCheck size={14} className="text-primary" />
+            <span className="text-[9px] font-black text-slate-800 dark:text-white uppercase tracking-widest">{settings.platform} Sync</span>
+         </div>
+         <p className="text-[8px] font-bold text-slate-400 dark:text-textDim uppercase tracking-widest leading-relaxed italic">
+           Optimized for {settings.platform} indexing rules.
+         </p>
+      </div>
     </aside>
   );
 };
@@ -183,31 +180,54 @@ const Sidebar: React.FC<SidebarProps> = ({ settings, setSettings, onManageKeys }
 const ModeButton: React.FC<{ label: string, icon: React.ReactNode, active: boolean, onClick: () => void, description: string }> = ({ label, icon, active, onClick, description }) => (
   <button 
     onClick={onClick}
-    className={`flex flex-col gap-1 w-full px-5 py-5 rounded-[1.25rem] text-left transition-all duration-300 border-2 active:scale-95 ${active ? 'bg-primary/5 text-primary border-primary/30 shadow-[0_10px_20px_-5px_rgba(0,212,255,0.1)] scale-[1.02]' : 'text-textDim hover:text-textMain hover:bg-bgMain border-transparent'}`}
+    className={`flex flex-col gap-1 w-full px-4 py-3.5 rounded-xl text-left transition-all duration-300 border active:scale-95 ${active ? 'bg-green-500/5 border-green-500/20 text-green-600 shadow-sm' : 'text-slate-400 dark:text-textDim hover:text-slate-800 dark:hover:text-textMain hover:bg-slate-50 dark:hover:bg-white/5 border-transparent'}`}
   >
-    <div className="flex items-center gap-3 text-[11px] font-black uppercase tracking-[0.15em]">
-      <div className={`p-2 rounded-xl transition-all ${active ? 'bg-primary text-white' : 'bg-bgMain text-textDim'}`}>
+    <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest">
+      <div className={`p-1.5 rounded-lg transition-all ${active ? 'bg-green-500 text-white' : 'bg-slate-100 dark:bg-white/10 text-slate-400'}`}>
         {icon}
       </div>
       {label}
     </div>
-    <span className="text-[9px] font-bold opacity-60 ml-12 tracking-tight uppercase">{description}</span>
+    <span className="text-[8px] font-bold opacity-60 ml-9 tracking-tight uppercase leading-none">{description}</span>
   </button>
 );
 
-const SidebarSlider: React.FC<{ label: string, min: number, max: number, limit: number, onMinChange: (v: number) => void, onMaxChange: (v: number) => void }> = ({ label, min, max, limit, onMinChange, onMaxChange }) => (
-  <div className="space-y-4">
+const SidebarSlider: React.FC<{ label: string, value: number, limit: number, onChange: (v: number) => void }> = ({ label, value, limit, onChange }) => (
+  <div className="space-y-3">
     <div className="flex items-center justify-between px-1">
-      <span className="text-[9px] font-black text-textDim uppercase tracking-[0.2em]">{label}</span>
-      <span className="text-[10px] font-black text-primary px-3 py-1 bg-primary/10 rounded-lg tabular-nums transition-all hover:scale-110">{min} — {max}</span>
-    </div>
-    <div className="space-y-4 group">
-      <div className="relative h-1.5 w-full bg-borderMain rounded-full overflow-hidden">
-        <div className="absolute top-0 bottom-0 bg-primary/30 transition-all duration-300" style={{ left: `${(min/limit)*100}%`, right: `${100 - (max/limit)*100}%` }} />
+      <div className="flex items-center gap-1.5 group cursor-help">
+        <span className="text-[11px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-tight">{label}</span>
+        <Info size={12} className="text-slate-400 opacity-50 group-hover:opacity-100 transition-opacity" />
       </div>
-      <input type="range" min="0" max={limit} value={min} onChange={(e) => onMinChange(parseInt(e.target.value))} className="w-full h-1.5 cursor-pointer appearance-none bg-transparent -mt-5.5 relative z-10" />
-      <input type="range" min="0" max={limit} value={max} onChange={(e) => onMaxChange(parseInt(e.target.value))} className="w-full h-1.5 cursor-pointer appearance-none bg-transparent -mt-5.5 relative z-10" />
+      <span className="text-[12px] font-black text-slate-800 dark:text-white tabular-nums">{value}</span>
     </div>
+    <div className="relative flex items-center h-4">
+      <div className="absolute w-full h-1 bg-slate-100 dark:bg-white/10 rounded-full" />
+      <div className="absolute h-1 bg-primary rounded-full" style={{ width: `${(value / limit) * 100}%` }} />
+      <input 
+        type="range" 
+        min="0" 
+        max={limit} 
+        value={value} 
+        onChange={(e) => onChange(parseInt(e.target.value))} 
+        className="absolute w-full h-1 cursor-pointer appearance-none bg-transparent accent-primary hover:accent-primary/80 transition-all z-10" 
+      />
+    </div>
+  </div>
+);
+
+const SidebarToggle: React.FC<{ label: string, checked: boolean, onChange: (v: boolean) => void }> = ({ label, checked, onChange }) => (
+  <div className="flex items-center justify-between px-1">
+    <div className="flex items-center gap-2 group cursor-help">
+      <span className="text-[11px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-tight">{label}</span>
+      <Info size={12} className="text-slate-400 opacity-50 group-hover:opacity-100 transition-opacity" />
+    </div>
+    <button 
+      onClick={() => onChange(!checked)}
+      className={`relative w-11 h-5.5 rounded-full transition-all duration-300 outline-none ${checked ? 'bg-primary' : 'bg-slate-200 dark:bg-white/10'}`}
+    >
+      <div className={`absolute top-0.5 left-0.5 w-4.5 h-4.5 bg-white rounded-full shadow-sm transition-transform duration-300 ${checked ? 'translate-x-5.5' : 'translate-x-0'}`} />
+    </button>
   </div>
 );
 
