@@ -72,26 +72,33 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchView, onManageKeys, toggleSideb
               <Code size={20} />
             </button>
             
-            {isDevOpen && config && (
+            {isDevOpen && (
               <div className="absolute top-full right-0 mt-4 w-72 md:w-80 bg-white dark:bg-surface border border-borderMain rounded-[2rem] shadow-2xl p-6 animate-in zoom-in-95 duration-200 z-[100]">
-                <div className="flex flex-col items-center text-center space-y-4">
-                  <div className="w-20 h-20 rounded-2xl bg-primary/10 p-1 border border-primary/20 overflow-hidden shadow-lg">
-                    <img src={config.developer.avatar || "https://via.placeholder.com/80"} alt="Dev" className="w-full h-full object-cover rounded-xl" />
+                {config ? (
+                  <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="w-20 h-20 rounded-2xl bg-primary/10 p-1 border border-primary/20 overflow-hidden shadow-lg">
+                      <img src={config.developer?.avatar || "https://via.placeholder.com/80"} alt="Dev" className="w-full h-full object-cover rounded-xl" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-black text-textMain uppercase tracking-widest">{config.developer?.name || "Developer"}</h4>
+                      <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em]">{config.developer?.role || "Software Engineer"}</p>
+                    </div>
+                    <p className="text-xs text-textDim font-medium leading-relaxed italic">"{config.developer?.bio || "Code is poetry."}"</p>
+                    <div className="flex gap-3 pt-2">
+                      {config.developer?.github && (
+                        <a href={config.developer.github} target="_blank" className="p-2 rounded-lg bg-slate-50 dark:bg-white/5 text-textDim hover:text-primary transition-all"><Github size={16} /></a>
+                      )}
+                      {config.developer?.portfolio && (
+                        <a href={config.developer.portfolio} target="_blank" className="p-2 rounded-lg bg-slate-50 dark:bg-white/5 text-textDim hover:text-primary transition-all"><Globe size={16} /></a>
+                      )}
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-black text-textMain uppercase tracking-widest">{config.developer.name}</h4>
-                    <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em]">{config.developer.role}</p>
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-10 gap-3">
+                    <Loader2 size={24} className="animate-spin text-primary" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-textDim">Linking Identity...</span>
                   </div>
-                  <p className="text-xs text-textDim font-medium leading-relaxed italic">"{config.developer.bio}"</p>
-                  <div className="flex gap-3 pt-2">
-                    {config.developer.github && (
-                      <a href={config.developer.github} target="_blank" className="p-2 rounded-lg bg-slate-50 dark:bg-white/5 text-textDim hover:text-primary transition-all"><Github size={16} /></a>
-                    )}
-                    {config.developer.portfolio && (
-                      <a href={config.developer.portfolio} target="_blank" className="p-2 rounded-lg bg-slate-50 dark:bg-white/5 text-textDim hover:text-primary transition-all"><Globe size={16} /></a>
-                    )}
-                  </div>
-                </div>
+                )}
               </div>
             )}
           </div>
@@ -124,7 +131,7 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchView, onManageKeys, toggleSideb
                 className={`flex items-center gap-3 pl-3 pr-1 py-1 rounded-full border transition-all shadow-sm ${isPremium ? 'border-primary/50 bg-primary/5 shadow-primary/10' : 'bg-bgSidebar border-borderMain hover:border-primary/30'}`}
               >
                 <div className="hidden md:flex flex-col items-end mr-1">
-                  <span className="text-[10px] font-black text-textMain uppercase tracking-wider">{user.displayName?.split(' ')[0] || 'User'}</span>
+                  <span className="text-[10px] font-black text-textMain uppercase tracking-wider truncate max-w-[80px]">{user.displayName?.split(' ')[0] || 'User'}</span>
                   <span className={`text-[8px] font-bold uppercase tracking-widest ${isPremium ? 'text-primary' : 'text-textDim'}`}>
                     {profileLoading ? '...' : (profile?.credits ?? 0)} Credits
                   </span>
