@@ -12,6 +12,24 @@ export interface APIKeyRecord {
   createdAt: string;
 }
 
+export interface SystemConfig {
+  developer: {
+    name: string;
+    role: string;
+    bio: string;
+    avatar: string;
+    github?: string;
+    portfolio?: string;
+  };
+  ads: {
+    enabled: boolean;
+    visibility: 'Free' | 'All';
+    image: string;
+    link: string;
+    label: string;
+  };
+}
+
 export interface UserProfile {
   credits: number;
   maxCredits: number;
